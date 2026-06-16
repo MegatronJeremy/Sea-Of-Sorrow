@@ -1,0 +1,10 @@
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+pandas>=2.2
+numpy>=1.26
+matplotlib>=3.8
+xlsxwriter>=3.2
+scikit-learn>=1.4   # samo za verifikaciju sopstvenih ML implementacija (zadaci 4/5/6)

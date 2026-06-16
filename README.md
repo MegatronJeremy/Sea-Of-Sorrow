@@ -9,19 +9,27 @@ proizvodima bele tehnike sa srpskih onlajn prodavnica.
 **Izvor podataka:** [Tehnomanija](https://www.tehnomanija.rs)
 **Baza:** PostgreSQL · **Jezik:** Python · **GUI:** Tkinter
 
+Zvanična postavka zadatka: `../PSZ_Projekat_2026.pdf` (u roditeljskom PSZ folderu,
+van ovog repoa — videti i [`izvestaj/IZVESTAJ.md`](izvestaj/IZVESTAJ.md) za šablon izveštaja).
+
 ---
 
 ## Sadržaj zadataka
 
 | # | Zadatak | Poeni | Status |
 |---|---------|:-----:|:------:|
-| 1 | Prikupljanje podataka (veb indekser + parser) | 10 | ✅ kod gotov |
-| 2 | Analiza i preprocesiranje (clean baza ≥ 7000) | 10 | 🔧 u izradi |
-| 3 | Vizuelizacija (matplotlib, PNG grafici) | 5 | 🔧 u izradi |
-| 4 | Linearna regresija od nule (gradijentni spust) | 12 | 🔧 u izradi |
-| 5 | K-means klasterovanje od nule | 11 | 🔧 u izradi |
-| 6 | Content-based recommender od nule | 12 | 🔧 u izradi |
+| 1 | Prikupljanje podataka (veb indekser + parser) | 10 | 🔧 skelet gotov, selektori potvrđeni na primeru frižidera — treba `--discover` za sve kategorije i pun `--run` |
+| 2 | Analiza i preprocesiranje (clean baza ≥ 7000) | 10 | 🔧 skelet gotov, čeka podatke iz zadatka 1 |
+| 3 | Vizuelizacija (matplotlib, PNG grafici) | 5 | 🔧 skelet gotov, čeka prečišćenu bazu |
+| 4 | Linearna regresija od nule (gradijentni spust) | 12 | 🔧 implementirano, treba evaluacija/tjuning na realnim podacima |
+| 5 | K-means klasterovanje od nule | 11 | 🔧 implementirano, treba evaluacija/tjuning na realnim podacima |
+| 6 | Content-based recommender od nule | 12 | 🔧 implementirano, treba provera na realnim podacima |
 | | **Ukupno** | **60** | |
+
+> **Sledeći korak:** pokrenuti `python crawler.py --discover` da se potvrde/isprave
+> slugovi kategorija u `config.py` (televizori i klima uređaji nisu pod
+> `bela-tehnika/...` putanjom — videti komentar u `config.KATEGORIJE`), zatim
+> `--test --kat <naziv>` za svaku kategoriju pre punog `--run`.
 
 > Obavezno je uraditi bar jedan zadatak iz skupa {4, 5} za prolaz.
 > Zadaci 4, 5 i 6 implementiraju algoritme **ručno** (bez gotovih ML

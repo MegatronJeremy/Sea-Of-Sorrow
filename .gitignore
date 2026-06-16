@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+podaci/*.html
+podaci/*.csv
+*.xlsx
+!izvestaj/upiti_rezultati.xlsx
+.idea/
