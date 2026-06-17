@@ -23,6 +23,11 @@ NAZIVI_UPITA = [
     "energ_klasa_C_ili_bolje",
     "cena_do_50000",
     "top30_televizori_cena",
+    "statistike_cena_po_kategoriji",
+    "procenat_klasa_A_po_kategoriji",
+    "top10_brendovi_po_ceni",
+    "dostupnost_po_kategoriji",
+    "frizideri_po_velicini",
 ]
 
 

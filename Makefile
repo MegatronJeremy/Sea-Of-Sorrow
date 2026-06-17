@@ -1,4 +1,4 @@
-.PHONY: db-init discover test-crawl crawl analiza viz app clean
+.PHONY: db-init discover test-crawl crawl analiza viz app test clean
 
 # Zadatak 1
 db-init:
@@ -25,6 +25,18 @@ viz:
 # Zadaci 4-6 (GUI aplikacija)
 app:
 	cd kod/aplikacija && python app.py
+
+# Testovi (rade bez baze)
+test:
+	python -m pytest
+
+# Samo debug provera okoline (bez baze)
+debug:
+	python kod/debug.py
+
+# Debug provera sa bazom
+debug-db:
+	python kod/debug.py --db --verbose
 
 clean:
 	find . -name "__pycache__" -type d -exec rm -rf {} +

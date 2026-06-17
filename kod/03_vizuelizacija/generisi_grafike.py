@@ -1,8 +1,10 @@
 """
 Zadatak 3: Vizuelizacija podataka iz revidirane baze.
 
-Generiše 4 grafikona (broj/procentualni odnos po kategoriji, brendu,
-cenovnom opsegu i energetskoj klasi) i čuva ih kao PNG u izvestaj/grafici/.
+Generiše 6 tipova grafikona i čuva ih kao PNG u izvestaj/grafici/:
+  - bar + pie po kategoriji, brendu, cenovnom opsegu, energetskoj klasi
+  - scatter: cena vs. zapremina (frižideri) i cena vs. dijagonala (televizori)
+  - box plot: raspodela cena po kategoriji
 
 Pokretanje:
     cd kod/03_vizuelizacija
@@ -63,6 +65,64 @@ def graf_energetska_klasa(df: pd.DataFrame):
     _bar_i_pie(klase, "Proizvodi po energetskoj klasi", "energetska_klasa")
 
 
+def graf_scatter_cena_zapremina(df: pd.DataFrame):
+    """Scatter plot: cena vs. zapremina (l) za frižidere i zamrzivače."""
+    pod = df[df["kategorija"].isin(["frizider", "zamrzivac"])].dropna(
+        subset=["zapremina_l", "cena"]
+    )
+    if pod.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for kat, grupa in pod.groupby("kategorija"):
+        ax.scatter(grupa["zapremina_l"], grupa["cena"] / 1000,
+                   label=kat, alpha=0.6, s=30)
+    ax.set_xlabel("Zapremina (l)")
+    ax.set_ylabel("Cena (hilj. RSD)")
+    ax.set_title("Cena vs. zapremina (frižideri / zamrzivači)")
+    ax.legend()
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "scatter_cena_zapremina.png", dpi=150)
+    plt.close(fig)
+
+
+def graf_scatter_cena_dijagonala(df: pd.DataFrame):
+    """Scatter plot: cena vs. dijagonala (inch) za televizore."""
+    pod = df[df["kategorija"] == "televizor"].dropna(subset=["dijagonala_inch", "cena"])
+    if pod.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(pod["dijagonala_inch"], pod["cena"] / 1000,
+               alpha=0.6, s=30, color="#dd8452")
+    ax.set_xlabel('Dijagonala ekrana (inch)')
+    ax.set_ylabel("Cena (hilj. RSD)")
+    ax.set_title("Cena vs. dijagonala ekrana (televizori)")
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "scatter_cena_dijagonala.png", dpi=150)
+    plt.close(fig)
+
+
+def graf_boxplot_cena_po_kategoriji(df: pd.DataFrame, min_zapisa: int = 10):
+    """Box plot raspodele cena po kategorijama (samo kategorije sa >= min_zapisa)."""
+    grupe = {
+        kat: pod["cena"].dropna().values / 1000
+        for kat, pod in df.groupby("kategorija")
+        if len(pod) >= min_zapisa
+    }
+    if not grupe:
+        return
+
+    fig, ax = plt.subplots(figsize=(max(6, len(grupe) * 1.2), 5))
+    ax.boxplot(grupe.values(), labels=grupe.keys(), patch_artist=True)
+    ax.set_ylabel("Cena (hilj. RSD)")
+    ax.set_title("Raspodela cena po kategoriji")
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "boxplot_cena_kategorija.png", dpi=150)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM proizvodi_revidirana;", conn)
@@ -72,5 +132,8 @@ if __name__ == "__main__":
     graf_brendovi(df)
     graf_cenovni_opsezi(df)
     graf_energetska_klasa(df)
+    graf_scatter_cena_zapremina(df)
+    graf_scatter_cena_dijagonala(df)
+    graf_boxplot_cena_po_kategoriji(df)
 
     print(f"Grafici sačuvani u {IZLAZ_DIR.resolve()}")
