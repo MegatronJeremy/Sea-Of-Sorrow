@@ -2,7 +2,11 @@
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
-## Instalacija Python zavisnosti
+## Automatski setup (pronalazi Python 3.10+, pravi venv, instalira, inicijalizuje bazu)
+setup:
+	powershell -ExecutionPolicy Bypass -File setup.ps1
+
+## Instalacija Python zavisnosti (pretpostavlja aktivan venv)
 install:
 	pip install -r requirements.txt
 
@@ -12,9 +16,6 @@ db-init:
 	from zajednicko.db import run_sql_file; \
 	run_sql_file('baza/01_schema_primarna.sql'); \
 	print('Primarna baza OK: podaci/psz.db')"
-
-## Sve odjednom: instaliraj + inicijalizuj bazu
-setup: install db-init
 
 # ── Zadatak 1: Crawler ────────────────────────────────────────────────────────
 
