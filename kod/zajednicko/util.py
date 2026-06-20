@@ -20,9 +20,14 @@ ENERGETSKA_KLASA_NA_BROJ = {klasa: i + 1 for i, klasa in enumerate(ENERGETSKE_KL
 
 def energetska_klasa_u_broj(klasa: str | None) -> int | None:
     """Mapira tekstualnu energetsku klasu u broj (G=1 ... A+++=10) za ML modele."""
-    if not klasa:
+    if klasa is None:
         return None
-    klasa = klasa.strip().upper()
+    try:
+        klasa = str(klasa).strip().upper()
+    except Exception:
+        return None
+    if not klasa or klasa == "NAN":
+        return None
     return ENERGETSKA_KLASA_NA_BROJ.get(klasa)
 
 

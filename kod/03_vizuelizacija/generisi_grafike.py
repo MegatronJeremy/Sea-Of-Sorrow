@@ -114,7 +114,7 @@ def graf_boxplot_cena_po_kategoriji(df: pd.DataFrame, min_zapisa: int = 10):
         return
 
     fig, ax = plt.subplots(figsize=(max(6, len(grupe) * 1.2), 5))
-    ax.boxplot(grupe.values(), labels=grupe.keys(), patch_artist=True)
+    ax.boxplot(list(grupe.values()), tick_labels=list(grupe.keys()), patch_artist=True)
     ax.set_ylabel("Cena (hilj. RSD)")
     ax.set_title("Raspodela cena po kategoriji")
     plt.xticks(rotation=30, ha="right")
