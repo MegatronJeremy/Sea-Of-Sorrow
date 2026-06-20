@@ -98,39 +98,38 @@ def proveri_env() -> None:
 
 
 def proveri_bazu() -> None:
-    naslov("4. Konekcija na bazu (PostgreSQL)")
+    naslov("4. Konekcija na bazu (SQLite)")
     try:
-        from zajednicko.db import get_connection
+        from zajednicko.db import DB_PATH, get_connection
+        from pathlib import Path
+        print(f"{INFO}Putanja: {DB_PATH}")
+        if not Path(DB_PATH).exists():
+            print(f"{WARN}Baza ne postoji. Pokreni: .\\run.ps1 setup")
+            return
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute("SELECT version();")
+        cur.execute("SELECT sqlite_version();")
         ver = cur.fetchone()[0]
         conn.close()
-        print(f"{OK}Konekcija uspela.")
-        print(f"{INFO}{textwrap.shorten(ver, 60)}")
+        print(f"{OK}Konekcija uspela. SQLite {ver}")
     except Exception as e:
         print(f"{ERR}Konekcija neuspela: {e}")
-        print(f"      Proveri DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD u .env")
         return
 
     try:
         from zajednicko.db import cursor as db_cursor
         with db_cursor() as cur:
-            cur.execute("""
-                SELECT table_name, (SELECT count(*) FROM information_schema.columns
-                    WHERE table_name = t.table_name) AS br_kolona
-                FROM information_schema.tables t
-                WHERE table_schema = 'public'
-                ORDER BY table_name;
-            """)
-            tabele = cur.fetchall()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+            tabele = [r[0] for r in cur.fetchall()]
         if tabele:
             print(f"\n{INFO}Tabele u bazi:")
-            for naziv, br_kol in tabele:
-                print(f"      {naziv:<35} ({br_kol} kolona)")
+            for naziv in tabele:
+                with db_cursor() as cur:
+                    cur.execute(f"SELECT count(*) FROM {naziv};")
+                    br = cur.fetchone()[0]
+                print(f"      {naziv:<35} ({br} zapisa)")
         else:
-            print(f"{WARN}Baza je prazna (nema tabela u 'public' shemi). Pokreni:")
-            print(f"      psql -d psz_primarna -f baza/01_schema_primarna.sql")
+            print(f"{WARN}Baza je prazna. Pokreni: .\\run.ps1 setup")
     except Exception as e:
         print(f"{WARN}Nije uspelo listanje tabela: {e}")
 
