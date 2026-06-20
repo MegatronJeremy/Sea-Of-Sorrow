@@ -78,8 +78,8 @@ def test(kategorija_naziv: str, broj_primera: int = 5):
 
 
 def _auto_workers() -> int:
-    """Broj workera: 2x CPU jezgara, min 2, max 8 (I/O-bound task)."""
-    return max(2, min((os.cpu_count() or 2) * 2, 8))
+    """Broj workera: 4x CPU jezgara, min 4 (I/O-bound task — ako sajt blokira, smanji --workers)."""
+    return max(4, (os.cpu_count() or 4) * 4)
 
 
 def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
