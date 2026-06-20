@@ -19,6 +19,7 @@ podesiti CSS selektore u config.SELECTORS.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -76,31 +77,34 @@ def test(kategorija_naziv: str, broj_primera: int = 5):
         print(f"      ({len(podaci['sve_karakteristike'])} tehničkih karakteristika pronađeno)\n")
 
 
-def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 4):
+def _auto_workers() -> int:
+    """Broj workera: 2x CPU jezgara, min 2, max 8 (I/O-bound task)."""
+    return max(2, min((os.cpu_count() or 2) * 2, 8))
+
+
+def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
     # uvoz db.py odmah pre upisa, kako --discover/--test ne bi zahtevali konekciju na bazu
     from db import broj_zapisa, upsert_proizvod
 
-    _print_lock = threading.Lock()
+    if workers <= 0:
+        workers = _auto_workers()
 
-    def _log(poruka: str):
-        with _print_lock:
-            print(poruka, flush=True)
+    _counter_lock = threading.Lock()
+    _zavrseno = 0
 
-    def _preuzmi_i_parsiraj(href: str, naziv: str, redni: int, ukupno: int) -> dict | None:
-        """Preuzima jednu stranicu proizvoda i parsira je — poziva se iz thread pool-a."""
-        fetcher_local = Fetcher()  # svaki thread dobija svoj fetcher/session
+    def _preuzmi_i_parsiraj(href: str, naziv: str, ukupno: int) -> tuple[int, dict | None]:
+        nonlocal _zavrseno
+        fetcher_local = Fetcher()
         url_proizvoda = apsolutni_url(href)
-        _log(f"    [{redni}/{ukupno}] {url_proizvoda}")
         resp_p = fetcher_local.get(url_proizvoda)
+        with _counter_lock:
+            _zavrseno += 1
+            br = _zavrseno
+            print(f"  [{br:>2}/{ukupno}] preuzeto...", end="\r", flush=True)
         if resp_p is None:
-            _log(f"    [{redni}/{ukupno}] GREŠKA — preskačem")
-            return None
+            return br, None
         podaci = parsiraj_proizvod(resp_p.text, url_proizvoda, naziv)
-        if podaci is None:
-            _log(f"    [{redni}/{ukupno}] nije prepoznato — preskačem")
-            return None
-        _log(f"    [{redni}/{ukupno}] OK — {podaci['naziv'][:60]}")
-        return podaci
+        return br, podaci
 
     fetcher = Fetcher()
     stavke = list(KATEGORIJE.items())
@@ -110,7 +114,7 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 4):
             print(f"Nepoznata kategorija: {kategorija_naziv}")
             return
 
-    print(f"Paralelni crawl sa {workers} workera.\n")
+    print(f"Paralelni crawl — {workers} workera (auto: {os.cpu_count()} CPU jezgara).\n")
     ukupno_upisano = 0
 
     for slug, naziv in stavke:
@@ -124,18 +128,36 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 4):
                 break
 
             linkovi, sledeca = parsiraj_listing(resp.text)
-            print(f"  strana {stranica}: {len(linkovi)} proizvoda")
+            n = len(linkovi)
+            print(f"  Strana {stranica}: {n} proizvoda", flush=True)
 
+            # reset brojaca za ovu stranicu
+            with _counter_lock:
+                _zavrseno = 0
+
+            rezultati: dict[int, dict | None] = {}
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures = {
-                    pool.submit(_preuzmi_i_parsiraj, href, naziv, i, len(linkovi)): href
+                    pool.submit(_preuzmi_i_parsiraj, href, naziv, n): i
                     for i, href in enumerate(linkovi, 1)
                 }
                 for future in as_completed(futures):
-                    podaci = future.result()
-                    if podaci:
-                        upsert_proizvod(podaci)
-                        ukupno_upisano += 1
+                    redni, podaci = future.result()
+                    rezultati[redni] = podaci
+
+            # ispis u redu i upis u bazu
+            print(" " * 40, end="\r")  # obrisi progress liniju
+            ok = greska = 0
+            for _, podaci in sorted(rezultati.items()):
+                if podaci:
+                    naziv_kratko = podaci["naziv"][:55]
+                    print(f"    OK  {naziv_kratko}")
+                    upsert_proizvod(podaci)
+                    ukupno_upisano += 1
+                    ok += 1
+                else:
+                    greska += 1
+            print(f"  => {ok} upisano, {greska} greška  (ukupno u sesiji: {ukupno_upisano})")
 
             url = apsolutni_url(sledeca) if sledeca else None
             stranica += 1
