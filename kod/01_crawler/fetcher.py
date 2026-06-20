@@ -57,7 +57,7 @@ class Fetcher:
                 if resp.status_code == 200:
                     self._throttle()
                     return resp
-                if resp.status_code == 429 or resp.status_code >= 500:
+                if resp.status_code in (403, 429) or resp.status_code >= 500:
                     self._backoff(pokusaj)
                     continue
                 print(f"  [fetcher] HTTP {resp.status_code} za {url}")

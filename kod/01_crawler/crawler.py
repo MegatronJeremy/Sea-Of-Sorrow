@@ -78,8 +78,8 @@ def test(kategorija_naziv: str, broj_primera: int = 5):
 
 
 def _auto_workers() -> int:
-    """Broj workera: 16 (I/O-bound task — ako sajt blokira sa 403, smanji --workers)."""
-    return 16
+    """Broj workera: 12 (I/O-bound task — ako sajt blokira sa 403, smanji --workers)."""
+    return 12
 
 
 def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
