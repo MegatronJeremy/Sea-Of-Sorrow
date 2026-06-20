@@ -37,6 +37,35 @@ def get_connection(dbname: str | None = None):
     )
 
 
+def je_auth_greska(e: Exception) -> bool:
+    """True ako je izuzetak posledica pogrešne/nedostajuće lozinke."""
+    msg = str(e).lower()
+    return any(k in msg for k in ("password", "authentication", "lozink"))
+
+
+def postavi_lozinku(pwd: str, sacuvaj: bool = True) -> None:
+    """Postavlja lozinku za naredne konekcije (runtime) i opciono je upisuje u .env."""
+    global DB_PASSWORD
+    DB_PASSWORD = pwd
+    if sacuvaj:
+        _upisi_u_env("DB_PASSWORD", pwd)
+
+
+def _upisi_u_env(kljuc: str, vrednost: str) -> None:
+    """Ažurira (ili dodaje) jedan ključ u .env fajlu u korenu projekta."""
+    env = _ROOT / ".env"
+    linije = env.read_text(encoding="utf-8").splitlines() if env.exists() else []
+    nadjeno = False
+    for i, l in enumerate(linije):
+        if l.strip().startswith(f"{kljuc}="):
+            linije[i] = f"{kljuc}={vrednost}"
+            nadjeno = True
+            break
+    if not nadjeno:
+        linije.append(f"{kljuc}={vrednost}")
+    env.write_text("\n".join(linije) + "\n", encoding="utf-8")
+
+
 @contextmanager
 def cursor(dbname: str | None = None, dict_cursor: bool = False):
     """Context manager koji otvara konekciju + kursor i commituje na izlazu.

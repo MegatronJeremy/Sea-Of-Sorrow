@@ -158,7 +158,7 @@ class Aplikacija(tk.Tk):
         tk.Label(levo_hdr, text="S E A   O F   S O R R O W",
                  bg=BG2, fg=MUTED, font=("Consolas", 8)).pack(anchor="w")
 
-        self.df = ucitaj_revidiranu()
+        self.df = self._ucitaj_sa_promptom()
         n = len(self.df)
         desno_hdr = tk.Frame(hdr, bg=BG2)
         desno_hdr.pack(side="right", padx=20, pady=8)
@@ -182,6 +182,26 @@ class Aplikacija(tk.Tk):
         notebook.add(self.tab_regresija,     text="  Regresija cene  ")
         notebook.add(self.tab_klasterovanje, text="  Klasterovanje  ")
         notebook.add(self.tab_preporuke,     text="  Preporuke  ")
+
+    def _ucitaj_sa_promptom(self):
+        """Učita revidiranu bazu; na pogrešnu lozinku traži je dijalogom (do 3 puta)."""
+        import zajednicko.db as db
+        from tkinter import simpledialog
+        for _ in range(3):
+            try:
+                return ucitaj_revidiranu()
+            except Exception as e:
+                if not db.je_auth_greska(e):
+                    raise
+                pwd = simpledialog.askstring(
+                    "PostgreSQL lozinka",
+                    f"Pogrešna ili nedostajuća lozinka za korisnika '{db.DB_USER}'.\n"
+                    "Unesi lozinku:",
+                    show="*", parent=self)
+                if not pwd:
+                    raise
+                db.postavi_lozinku(pwd)  # čuva u .env za ubuduće
+        return ucitaj_revidiranu()
 
 
 # ── Tab 0: Pregled baze ───────────────────────────────────────────────────────
@@ -777,4 +797,13 @@ class TabPreporuke(tk.Frame):
 
 
 if __name__ == "__main__":
-    Aplikacija().mainloop()
+    try:
+        Aplikacija().mainloop()
+    except Exception as e:
+        import tkinter.messagebox as mb
+        mb.showerror(
+            "Greška pri pokretanju",
+            f"Ne mogu da se povežem na bazu:\n\n{e}\n\n"
+            "Proveri da je PostgreSQL pokrenut i da je baza inicijalizovana "
+            "(.\\run.ps1 setup).",
+        )
