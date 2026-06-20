@@ -12,10 +12,7 @@ install:
 
 ## Inicijalizacija SQLite baze (kreira podaci/psz.db automatski)
 db-init:
-	python -c "import sys; sys.path.insert(0,'kod'); \
-	from zajednicko.db import run_sql_file; \
-	run_sql_file('baza/01_schema_primarna.sql'); \
-	print('Primarna baza OK: podaci/psz.db')"
+	python kod/db_init.py
 
 # ── Zadatak 1: Crawler ────────────────────────────────────────────────────────
 
