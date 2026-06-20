@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -74,19 +76,43 @@ def test(kategorija_naziv: str, broj_primera: int = 5):
         print(f"      ({len(podaci['sve_karakteristike'])} tehničkih karakteristika pronađeno)\n")
 
 
-def run(kategorija_naziv: str | None, max_stranica: int):
+def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 4):
     # uvoz db.py odmah pre upisa, kako --discover/--test ne bi zahtevali konekciju na bazu
     from db import broj_zapisa, upsert_proizvod
 
+    _print_lock = threading.Lock()
+
+    def _log(poruka: str):
+        with _print_lock:
+            print(poruka, flush=True)
+
+    def _preuzmi_i_parsiraj(href: str, naziv: str, redni: int, ukupno: int) -> dict | None:
+        """Preuzima jednu stranicu proizvoda i parsira je — poziva se iz thread pool-a."""
+        fetcher_local = Fetcher()  # svaki thread dobija svoj fetcher/session
+        url_proizvoda = apsolutni_url(href)
+        _log(f"    [{redni}/{ukupno}] {url_proizvoda}")
+        resp_p = fetcher_local.get(url_proizvoda)
+        if resp_p is None:
+            _log(f"    [{redni}/{ukupno}] GREŠKA — preskačem")
+            return None
+        podaci = parsiraj_proizvod(resp_p.text, url_proizvoda, naziv)
+        if podaci is None:
+            _log(f"    [{redni}/{ukupno}] nije prepoznato — preskačem")
+            return None
+        _log(f"    [{redni}/{ukupno}] OK — {podaci['naziv'][:60]}")
+        return podaci
+
     fetcher = Fetcher()
-    stavke = KATEGORIJE.items()
+    stavke = list(KATEGORIJE.items())
     if kategorija_naziv:
         stavke = [(s, n) for s, n in KATEGORIJE.items() if n == kategorija_naziv]
         if not stavke:
             print(f"Nepoznata kategorija: {kategorija_naziv}")
             return
 
+    print(f"Paralelni crawl sa {workers} workera.\n")
     ukupno_upisano = 0
+
     for slug, naziv in stavke:
         print(f"\n=== Kategorija: {naziv} ({slug}) ===")
         url = f"{BASE_URL}/{slug}"
@@ -100,20 +126,16 @@ def run(kategorija_naziv: str | None, max_stranica: int):
             linkovi, sledeca = parsiraj_listing(resp.text)
             print(f"  strana {stranica}: {len(linkovi)} proizvoda")
 
-            for i, href in enumerate(linkovi, 1):
-                url_proizvoda = apsolutni_url(href)
-                print(f"    [{i}/{len(linkovi)}] {url_proizvoda}", end="", flush=True)
-                resp_p = fetcher.get(url_proizvoda)
-                if resp_p is None:
-                    print(" — GREŠKA")
-                    continue
-                podaci = parsiraj_proizvod(resp_p.text, url_proizvoda, naziv)
-                if podaci is None:
-                    print(" — nije prepoznato")
-                    continue
-                upsert_proizvod(podaci)
-                ukupno_upisano += 1
-                print(f" — OK ({podaci['naziv'][:50]})")
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = {
+                    pool.submit(_preuzmi_i_parsiraj, href, naziv, i, len(linkovi)): href
+                    for i, href in enumerate(linkovi, 1)
+                }
+                for future in as_completed(futures):
+                    podaci = future.result()
+                    if podaci:
+                        upsert_proizvod(podaci)
+                        ukupno_upisano += 1
 
             url = apsolutni_url(sledeca) if sledeca else None
             stranica += 1
@@ -139,6 +161,8 @@ if __name__ == "__main__":
     grupa.add_argument("--run", action="store_true", help="pun crawl sa upisom u bazu")
     ap.add_argument("--kat", help="naziv kategorije iz config.KATEGORIJE (vrednosti rečnika)")
     ap.add_argument("--max-stranica", type=int, default=MAX_STRANICA_PO_KATEGORIJI)
+    ap.add_argument("--workers", type=int, default=4,
+                    help="broj paralelnih workera za preuzimanje proizvoda (default: 4)")
     args = ap.parse_args()
 
     if args.discover:
@@ -148,4 +172,4 @@ if __name__ == "__main__":
             raise SystemExit("--test zahteva --kat <naziv_kategorije>")
         test(args.kat)
     elif args.run:
-        run(args.kat, args.max_stranica)
+        run(args.kat, args.max_stranica, args.workers)
