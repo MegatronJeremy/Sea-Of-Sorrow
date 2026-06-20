@@ -57,7 +57,6 @@ def proveri_pakete() -> None:
         ("requests",       "requests"),
         ("bs4",            "beautifulsoup4"),
         ("lxml",           "lxml"),
-        ("psycopg2",       "psycopg2-binary"),
         ("dotenv",         "python-dotenv"),
         ("pandas",         "pandas"),
         ("numpy",          "numpy"),
@@ -83,7 +82,7 @@ def proveri_env() -> None:
     env_fajl = _ROOT / ".env"
     example = _ROOT / ".env.example"
     if not env_fajl.exists():
-        print(f"{WARN}.env fajl ne postoji. Napravi ga kopiranjem .env.example:")
+        print(f"{INFO}.env fajl ne postoji — koristi se podrazumevano: podaci/psz.db")
         print(f"      cp {example} {env_fajl}")
         return
 
