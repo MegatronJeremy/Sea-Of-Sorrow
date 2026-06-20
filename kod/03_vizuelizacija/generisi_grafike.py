@@ -20,7 +20,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from zajednicko.db import get_connection  # noqa: E402
 from zajednicko.util import cenovni_opseg  # noqa: E402
 
-IZLAZ_DIR = Path("../../izvestaj/grafici")
+IZLAZ_DIR = Path(__file__).resolve().parents[2] / "izvestaj" / "grafici"
 IZLAZ_DIR.mkdir(parents=True, exist_ok=True)
 
 
