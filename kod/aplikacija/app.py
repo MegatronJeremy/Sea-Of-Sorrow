@@ -14,6 +14,10 @@ from tkinter import messagebox, ttk
 
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from zajednicko.db import get_connection  # noqa: E402
@@ -41,6 +45,10 @@ FONT     = ("Consolas", 10)
 FONT_SM  = ("Consolas", 9)
 FONT_LG  = ("Consolas", 13, "bold")
 FONT_HDR = ("Consolas", 11, "bold")
+
+# Paleta boja za klastere (vivid na crnom)
+KLASTER_BOJE = ["#00ff41", "#ff9f1c", "#00d4ff", "#ff003c",
+                "#c77dff", "#ffe600", "#ff6ec7", "#7CFC00"]
 
 
 def ucitaj_revidiranu() -> pd.DataFrame:
@@ -341,14 +349,23 @@ class TabKlasterovanje(tk.Frame):
         stil_btn(btn)
         btn.pack(fill="x", pady=12)
 
-        # Desno — rezultati
+        # Desno — vizuelizacija (gore) + rezultati (dole)
         desno = tk.Frame(self, bg=BG)
         desno.pack(side="right", fill="both", expand=True, padx=(0, 20), pady=20)
 
-        k_rez = kartica(desno, "Rezultati")
-        k_rez.pack(fill="both", expand=True)
+        k_graf = kartica(desno, "Vizuelizacija klastera")
+        k_graf.pack(fill="both", expand=True)
 
-        self.tekst = tk.Text(k_rez, bg=BG, fg=TEXT, font=FONT_SM,
+        self.fig = Figure(figsize=(5, 3.6), dpi=100, facecolor=BG2)
+        self.ax = self.fig.add_subplot(111)
+        self._stilizuj_osu("Pokreni klasterovanje za prikaz")
+        self.canvas = FigureCanvasTkAgg(self.fig, master=k_graf)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        k_rez = kartica(desno, "Rezultati")
+        k_rez.pack(fill="x", pady=(12, 0))
+
+        self.tekst = tk.Text(k_rez, bg=BG, fg=TEXT, font=FONT_SM, height=8,
                              relief="flat", bd=0, padx=12, pady=8,
                              insertbackground=ACCENT, wrap="word")
         self.tekst.pack(fill="both", expand=True)
@@ -373,6 +390,56 @@ class TabKlasterovanje(tk.Frame):
         self.tekst.delete("1.0", tk.END)
         self.tekst.insert(tk.END, tekst)
         self.tekst.config(state="disabled", fg=boja)
+
+    def _stilizuj_osu(self, poruka: str = ""):
+        """Postavi dark stil na matplotlib osu (poziva se pri svakom crtanju)."""
+        self.ax.clear()
+        self.ax.set_facecolor(BG)
+        for strana in self.ax.spines.values():
+            strana.set_color(BORDER)
+        self.ax.tick_params(colors=MUTED, labelsize=8)
+        self.ax.xaxis.label.set_color(TEXT)
+        self.ax.yaxis.label.set_color(TEXT)
+        self.ax.title.set_color(ACCENT)
+        if poruka:
+            self.ax.text(0.5, 0.5, poruka, ha="center", va="center",
+                         color=MUTED, fontsize=10, transform=self.ax.transAxes)
+            self.ax.set_xticks([]); self.ax.set_yticks([])
+
+    def _nacrtaj(self, df: pd.DataFrame, izabrane: list[str]):
+        self._stilizuj_osu()
+
+        if len(izabrane) == 1:
+            # 1D: histogram po klasteru
+            kol = izabrane[0]
+            for kid in sorted(df["klaster"].unique()):
+                vals = df[df["klaster"] == kid][kol]
+                self.ax.hist(vals, bins=20, alpha=0.6,
+                             color=KLASTER_BOJE[kid % len(KLASTER_BOJE)],
+                             label=f"K{kid}")
+            self.ax.set_xlabel(kol)
+            self.ax.set_ylabel("broj proizvoda")
+        else:
+            # 2D: scatter prve dve izabrane promenljive (u izvornim jedinicama)
+            xk, yk = izabrane[0], izabrane[1]
+            for kid in sorted(df["klaster"].unique()):
+                grupa = df[df["klaster"] == kid]
+                boja = KLASTER_BOJE[kid % len(KLASTER_BOJE)]
+                self.ax.scatter(grupa[xk], grupa[yk], s=18, alpha=0.7,
+                                color=boja, edgecolors="none", label=f"K{kid}")
+                # centroid (prosek u izvornim jedinicama)
+                self.ax.scatter(grupa[xk].mean(), grupa[yk].mean(),
+                                s=180, marker="X", color=boja,
+                                edgecolors=BG, linewidths=1.5, zorder=5)
+            self.ax.set_xlabel(xk)
+            self.ax.set_ylabel(yk)
+
+        leg = self.ax.legend(fontsize=7, facecolor=BG2, edgecolor=BORDER,
+                             labelcolor=TEXT, loc="best")
+        if leg:
+            leg.get_frame().set_alpha(0.9)
+        self.fig.tight_layout()
+        self.canvas.draw()
 
     def _pokreni(self):
         izabrane = [k for k, v in self.checkboxi.items() if v.get()]
@@ -410,6 +477,8 @@ class TabKlasterovanje(tk.Frame):
             opis = interpretiraj_klaster(df_k, izabrane)
             linije.append(f"  Klaster {kid}  [{len(df_k):>3} proizvoda]  {opis}\n")
         self._upisi("".join(linije), TEXT)
+
+        self._nacrtaj(df, izabrane)
 
 
 # ── Tab 3: Preporuke ──────────────────────────────────────────────────────────
