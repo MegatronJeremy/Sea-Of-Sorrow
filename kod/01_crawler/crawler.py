@@ -148,7 +148,7 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
             # ispis u redu i upis u bazu
             print(" " * 40, end="\r")  # obrisi progress liniju
             ok = greska = 0
-            for _, podaci in sorted(rezultati.items()):
+            for i, podaci in sorted(rezultati.items()):
                 if podaci:
                     naziv_kratko = podaci["naziv"][:55]
                     print(f"    OK  {naziv_kratko}")
@@ -156,6 +156,8 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
                     ukupno_upisano += 1
                     ok += 1
                 else:
+                    url_pao = apsolutni_url(linkovi[i - 1])
+                    print(f"    GRESKA  {url_pao}")
                     greska += 1
             print(f"  => {ok} upisano, {greska} greška  (ukupno u sesiji: {ukupno_upisano})")
 
