@@ -15,9 +15,12 @@ videti komentare uz svaku kategoriju za status provere.
 
 BASE_URL = "https://www.tehnomanija.rs"
 
-# slug (putanja iza domena) -> (naziv kategorije koji ide u bazu, podkategorija)
-# Popuniti/proširiti po potrebi nakon --discover provere.
+# slug (putanja iza domena) -> naziv kategorije koji ide u bazu
+# Postavka definiše "belu tehniku" široko: kućni aparati, televizori, mašine za
+# pranje veša, frižideri, šporeti, klima uređaji i slično — zato uključujemo i
+# male kućne aparate, klimu i televizore (potrebno ≥8000 zapisa).
 KATEGORIJE: dict[str, str] = {
+    # — velika bela tehnika —
     "bela-tehnika/frizideri": "frizider",
     "bela-tehnika/zamrzivaci": "zamrzivac",
     "bela-tehnika/ves-masine": "ves_masina",
@@ -27,6 +30,26 @@ KATEGORIJE: dict[str, str] = {
     "bela-tehnika/mikrotalasne": "mikrotalasna",
     "bela-tehnika/aspiratori": "aspirator",
     "bela-tehnika/bojleri": "bojler",
+    # — televizori i klima —
+    "tv-foto-audio-i-video/televizori": "televizor",
+    "klima-uredjaji": "klima_uredjaj",
+    # — mali kućni aparati —
+    "mali-kucni-aparati/usisivaci": "usisivac",
+    "mali-kucni-aparati/pegle": "pegla",
+    "mali-kucni-aparati/blenderi": "blender",
+    "mali-kucni-aparati/seckalice": "seckalica",
+    "mali-kucni-aparati/sokovnici-i-cediljke-za-citruse": "sokovnik",
+    "mali-kucni-aparati/multipraktici-i-kuhinjski-roboti": "kuhinjski_robot",
+    "mali-kucni-aparati/aparati-za-pripremu-hrane": "aparat_za_hranu",
+    "mali-kucni-aparati/tosteri": "toster",
+    "mali-kucni-aparati/mini-pekare": "mini_pekara",
+    "mali-kucni-aparati/resoi": "reso",
+    "mali-kucni-aparati/airfryeri-i-friteze": "friteza",
+    "mali-kucni-aparati/aparati-za-vodu": "aparat_za_vodu",
+    "mali-kucni-aparati/aparati-za-kafu": "aparat_za_kafu",
+    "mali-kucni-aparati/masine-za-meso": "masina_za_meso",
+    "mali-kucni-aparati/mikseri": "mikser",
+    "mali-kucni-aparati/masine-za-sivenje": "masina_za_sivenje",
 }
 
 # Najveći broj stranica po kategoriji koji se obilazi (zaštita od beskonačnog crawl-a;
