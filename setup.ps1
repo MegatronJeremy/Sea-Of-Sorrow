@@ -68,7 +68,7 @@ if ($praviVenv) {
 
 # 3) Instaliraj zavisnosti
 Write-Host "Instaliram zavisnosti (pip install -r requirements.txt)..." -ForegroundColor Cyan
-& .venv\Scripts\pip install -r requirements.txt --quiet
+& .venv\Scripts\pip install -r requirements.txt
 if (-not $?) { Write-Host "GRESKA pri instalaciji!" -ForegroundColor Red; exit 1 }
 Write-Host "OK zavisnosti instalirane" -ForegroundColor Green
 
