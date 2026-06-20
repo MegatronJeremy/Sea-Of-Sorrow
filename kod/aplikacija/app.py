@@ -282,6 +282,15 @@ class TabKlasterovanje(tk.Frame):
     NUMERICKE = ["cena", "energetska_klasa_num", "dijagonala_inch",
                  "kapacitet_kg", "zapremina_l", "snaga_w"]
 
+    # (naziv, K, {kolona: tezina}) — zbir tezina = 100
+    # Vazno: izabrane kolone moraju ko-egzistirati (proizvod mora imati SVE
+    # popunjene) — npr. dijagonala (TV) i zapremina (frizider) se iskljucuju.
+    PRIMERI = [
+        ("Cena vs efikasnost", 3, {"cena": 60, "energetska_klasa_num": 40}),
+        ("Cena i zapremina",   4, {"cena": 50, "zapremina_l": 30, "energetska_klasa_num": 20}),
+        ("Cena i snaga",       3, {"cena": 60, "snaga_w": 40}),
+    ]
+
     def __init__(self, master, df: pd.DataFrame):
         super().__init__(master, bg=BG)
         self.df = df
@@ -316,6 +325,18 @@ class TabKlasterovanje(tk.Frame):
         self.k_entry = entry(k_frame, sirina=4, placeholder="4")
         self.k_entry.pack(side="left", padx=6)
 
+        # Primeri (preseti)
+        k_primeri = kartica(levo, "Primeri")
+        k_primeri.pack(fill="x", pady=(12, 0))
+        tk.Label(k_primeri, text="Klikni da popunis postavke:", bg=BG2,
+                 fg=MUTED, font=FONT_SM).pack(anchor="w", padx=10, pady=(8, 2))
+        for naziv, k, tezine in self.PRIMERI:
+            tk.Button(k_primeri, text=f"▪ {naziv}  (K={k})", bg=BG, fg=ACCENT,
+                      font=FONT_SM, relief="flat", bd=0, cursor="hand2", anchor="w",
+                      activebackground=BG2, activeforeground=TEXT,
+                      command=lambda k=k, t=tezine: self._popuni_primer(k, t)
+                      ).pack(fill="x", padx=10, pady=2)
+
         btn = tk.Button(levo, text="▶  Pokreni klasterovanje", command=self._pokreni)
         stil_btn(btn)
         btn.pack(fill="x", pady=12)
@@ -334,6 +355,18 @@ class TabKlasterovanje(tk.Frame):
         self.tekst.config(state="disabled")
         self._upisi("Izaberi promenljive, podesi tezine (zbir = 100%) i klikni Pokreni.\n\n"
                     "Primer: cena=50%, energ.klasa=30%, zapremina=20%, K=4\n")
+
+    def _popuni_primer(self, k: int, tezine: dict[str, float]):
+        for kol in self.NUMERICKE:
+            ukljuci = kol in tezine
+            self.checkboxi[kol].set(ukljuci)
+            e = self.tezine[kol]
+            e.delete(0, tk.END)
+            e.insert(0, str(tezine.get(kol, 0)))
+            e.config(fg=TEXT if ukljuci else MUTED)
+        self.k_entry.delete(0, tk.END)
+        self.k_entry.insert(0, str(k))
+        self.k_entry.config(fg=TEXT)
 
     def _upisi(self, tekst: str, boja: str = MUTED):
         self.tekst.config(state="normal")
@@ -356,6 +389,15 @@ class TabKlasterovanje(tk.Frame):
             return
         k = int(self.k_entry.get() or 4)
         df = self.df.dropna(subset=izabrane).copy()
+        if len(df) < k:
+            messagebox.showwarning(
+                "Premalo podataka",
+                f"Samo {len(df)} proizvoda ima sve izabrane atribute popunjene "
+                f"(potrebno bar K={k}).\n\nNeki atributi se iskljucuju — npr. "
+                f"dijagonala (TV) i zapremina (frizider) ne postoje na istom proizvodu. "
+                f"Izaberi atribute koji se javljaju zajedno."
+            )
+            return
         X = np.column_stack([normalizuj(df[kol]) * (tezine[i] / 100) for i, kol in enumerate(izabrane)])
         model = KMeans(k=k).fit(X)
         df["klaster"] = model.labele
