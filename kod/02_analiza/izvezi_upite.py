@@ -33,9 +33,20 @@ NAZIVI_UPITA = [
 
 def ucitaj_upite(putanja: str) -> list[str]:
     tekst = Path(putanja).read_text(encoding="utf-8")
-    # upiti su razdvojeni linijama komentara koje počinju sa "-- N)"
-    blokovi = re.split(r"-- \d+\)", tekst)[1:]  # prvi je prazan/uvodni komentar
-    return [b.strip() for b in blokovi]
+    blokovi = re.split(r"--\s*\d+\)", tekst)[1:]
+    rezultat = []
+    for blok in blokovi:
+        # ukloni sve redove pre prvog SQL kljucne reci
+        linije = blok.splitlines()
+        sql_start = next(
+            (i for i, l in enumerate(linije)
+             if re.match(r"\s*(SELECT|WITH|INSERT|UPDATE|DELETE)", l, re.I)),
+            0
+        )
+        sql = "\n".join(linije[sql_start:]).strip()
+        if sql:
+            rezultat.append(sql)
+    return rezultat
 
 
 if __name__ == "__main__":
@@ -49,6 +60,7 @@ if __name__ == "__main__":
         print(f"{naziv}: {len(df)} redova")
     conn.close()
 
-    Path("../../izvestaj").mkdir(exist_ok=True)
-    sacuvaj_u_excel(rezultati, "../../izvestaj/upiti_rezultati.xlsx")
+    _IZVESTAJ = _DIR.parents[1] / "izvestaj"
+    _IZVESTAJ.mkdir(exist_ok=True)
+    sacuvaj_u_excel(rezultati, str(_IZVESTAJ / "upiti_rezultati.xlsx"))
     print("Sačuvano u izvestaj/upiti_rezultati.xlsx")
