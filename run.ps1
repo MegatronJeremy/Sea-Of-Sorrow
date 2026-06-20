@@ -52,7 +52,8 @@ function Run-Komanda {
         { $_ -in "2","discover" } {
             Check-Venv
             Write-Host "Trazim kategorije na sajtu..." -ForegroundColor Cyan
-            & $VENV kod\01_crawler\crawler.py --discover
+            $da = @(); if ($Workers -gt 0) { $da += "--workers", $Workers }
+            & $VENV kod\01_crawler\crawler.py --discover @da
         }
         { $_ -in "3","crawl" } {
             Check-Venv

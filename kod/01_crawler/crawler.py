@@ -32,19 +32,33 @@ from fetcher import Fetcher  # noqa: E402
 from parser import apsolutni_url, parsiraj_listing, parsiraj_proizvod  # noqa: E402
 
 
-def discover():
-    fetcher = Fetcher()
-    print(f"Provera {len(KATEGORIJE)} kategorija na {BASE_URL} ...\n")
-    for slug, naziv in KATEGORIJE.items():
+def discover(workers: int = 0):
+    if workers <= 0:
+        workers = _auto_workers()
+
+    def _proveri(slug: str, naziv: str) -> str:
+        fetcher_local = Fetcher()  # svaki thread svoj fetcher/session
         url = f"{BASE_URL}/{slug}"
-        resp = fetcher.get(url)
+        resp = fetcher_local.get(url)
         if resp is None:
-            print(f"  [NE RADI]  {naziv:<22} {url}")
-            continue
+            return f"  [NE RADI]  {naziv:<22} {url}"
         linkovi, sledeca = parsiraj_listing(resp.text)
         status = "OK" if linkovi else "OK (0 proizvoda — provери selektore)"
-        print(f"  [{status}]  {naziv:<22} {url}  -> {len(linkovi)} proizvoda na 1. strani"
-              f"{', ima sledeću stranicu' if sledeca else ''}")
+        return (f"  [{status}]  {naziv:<22} {url}  -> {len(linkovi)} proizvoda na 1. strani"
+                f"{', ima sledeću stranicu' if sledeca else ''}")
+
+    print(f"Provera {len(KATEGORIJE)} kategorija na {BASE_URL} ({workers} workera) ...\n")
+    rezultati: dict[int, str] = {}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(_proveri, slug, naziv): i
+            for i, (slug, naziv) in enumerate(KATEGORIJE.items())
+        }
+        for future in as_completed(futures):
+            rezultati[futures[future]] = future.result()
+
+    for i in sorted(rezultati):  # ispis u originalnom redosledu
+        print(rezultati[i])
 
 
 def test(kategorija_naziv: str, broj_primera: int = 5):
@@ -190,7 +204,7 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     if args.discover:
-        discover()
+        discover(args.workers)
     elif args.test:
         if not args.kat:
             raise SystemExit("--test zahteva --kat <naziv_kategorije>")
