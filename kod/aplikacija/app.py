@@ -102,7 +102,7 @@ def entry(roditelj, sirina: int = 20, placeholder: str = "") -> tk.Entry:
 class Aplikacija(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PSZ — Bela tehnika | Tehnomanija.rs")
+        self.title("PSZ — Sea of Sorrow")
         self.geometry("1000x700")
         self.configure(bg=BG)
         self.resizable(True, True)
@@ -129,9 +129,9 @@ class Aplikacija(tk.Tk):
 
         levo_hdr = tk.Frame(hdr, bg=BG2)
         levo_hdr.pack(side="left", padx=20, pady=8)
-        tk.Label(levo_hdr, text="◤ P S Z · M A G I ◢", bg=BG2, fg=ACCENT,
+        tk.Label(levo_hdr, text="◤ P S Z ◢", bg=BG2, fg=ACCENT,
                  font=("Consolas", 14, "bold")).pack(anchor="w")
-        tk.Label(levo_hdr, text="SISTEM ZA PRONALAZENJE SKRIVENOG ZNANJA",
+        tk.Label(levo_hdr, text="S E A   O F   S O R R O W",
                  bg=BG2, fg=MUTED, font=("Consolas", 8)).pack(anchor="w")
 
         self.df = ucitaj_revidiranu()
