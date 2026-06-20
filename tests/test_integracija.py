@@ -11,16 +11,10 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
 import pytest
-
-# Mokujem psycopg2 pre importa koji ga zahtevaju
-for _mod in ("psycopg2", "psycopg2.extras"):
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
 
 _KOD = Path(__file__).parent.parent / "kod"
 for _d in (_KOD, _KOD / "01_crawler", _KOD / "02_analiza",

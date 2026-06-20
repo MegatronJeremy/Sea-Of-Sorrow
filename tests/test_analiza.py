@@ -2,27 +2,19 @@
 Testovi za kod/02_analiza/cisti_podatke.py
 
 Proverava logiku čišćenja i preprocesiranja — bez konekcije na bazu.
-psycopg2 se mokuje jer cisti_podatke.py uvozi zajednicko.db koji ga zahteva.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
 import pytest
 
-# Mokujem psycopg2 pre bilo kog importa koji ga koristi
-for _mod in ("psycopg2", "psycopg2.extras"):
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
-
 # conftest.py dodaje kod/ na sys.path
 from zajednicko.util import energetska_klasa_u_broj
 
-# importujemo direktno funkcije iz cisti_podatke.py
 sys.path.insert(0, str(Path(__file__).parent.parent / "kod" / "02_analiza"))
 from cisti_podatke import OBAVEZNE_KOLONE, DODATNE_KOLONE, MIN_DODATNIH_ATRIBUTA, ocisti
 

@@ -5,6 +5,7 @@ __pycache__/
 venv/
 podaci/*.html
 podaci/*.csv
+podaci/*.db
 *.xlsx
 !izvestaj/upiti_rezultati.xlsx
 .idea/

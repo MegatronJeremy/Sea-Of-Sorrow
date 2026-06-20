@@ -2,8 +2,7 @@
 
 # Zadatak 1
 db-init:
-	createdb $${DB_NAME:-psz_primarna}
-	psql -d $${DB_NAME:-psz_primarna} -f baza/01_schema_primarna.sql
+	python -c "from zajednicko.db import run_sql_file; run_sql_file('baza/01_schema_primarna.sql')"
 
 discover:
 	cd kod/01_crawler && python crawler.py --discover

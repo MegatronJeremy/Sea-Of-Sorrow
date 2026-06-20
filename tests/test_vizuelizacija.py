@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import matplotlib
 matplotlib.use("Agg")  # mora biti pre bilo kog pyplot importa
@@ -17,11 +16,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-
-# Mokujem psycopg2 i dotenv pre importa vizuelizacije (koja uvozi zajednicko.db)
-for _mod in ("psycopg2", "psycopg2.extras"):
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "kod" / "03_vizuelizacija"))
 
