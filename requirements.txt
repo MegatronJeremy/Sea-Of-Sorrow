@@ -8,4 +8,5 @@ numpy>=1.26
 matplotlib>=3.8
 xlsxwriter>=3.2
 scikit-learn>=1.4   # samo za verifikaciju sopstvenih ML implementacija (zadaci 4/5/6)
+pytest>=8.0
 # sqlite3 je deo Python standardne biblioteke — nema posebne instalacije
