@@ -183,8 +183,8 @@ if __name__ == "__main__":
     grupa.add_argument("--run", action="store_true", help="pun crawl sa upisom u bazu")
     ap.add_argument("--kat", help="naziv kategorije iz config.KATEGORIJE (vrednosti rečnika)")
     ap.add_argument("--max-stranica", type=int, default=MAX_STRANICA_PO_KATEGORIJI)
-    ap.add_argument("--workers", type=int, default=4,
-                    help="broj paralelnih workera za preuzimanje proizvoda (default: 4)")
+    ap.add_argument("--workers", type=int, default=0,
+                    help="broj paralelnih workera (default: auto)")
     args = ap.parse_args()
 
     if args.discover:
