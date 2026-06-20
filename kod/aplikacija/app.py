@@ -51,6 +51,22 @@ KLASTER_BOJE = ["#00ff41", "#ff9f1c", "#00d4ff", "#ff003c",
                 "#c77dff", "#ffe600", "#ff6ec7", "#7CFC00"]
 
 
+def dark_osu(ax, poruka: str = ""):
+    """Primeni dark (NERV) stil na matplotlib osu."""
+    ax.clear()
+    ax.set_facecolor(BG)
+    for strana in ax.spines.values():
+        strana.set_color(BORDER)
+    ax.tick_params(colors=MUTED, labelsize=7)
+    ax.xaxis.label.set_color(TEXT)
+    ax.yaxis.label.set_color(TEXT)
+    ax.title.set_color(ACCENT)
+    if poruka:
+        ax.text(0.5, 0.5, poruka, ha="center", va="center",
+                color=MUTED, fontsize=9, transform=ax.transAxes)
+        ax.set_xticks([]); ax.set_yticks([])
+
+
 def ucitaj_revidiranu() -> pd.DataFrame:
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM proizvodi_revidirana;", conn)
@@ -223,6 +239,17 @@ class TabRegresija(tk.Frame):
         self.lbl_metrike = tk.Label(levo, text="model nije obucen", bg=BG, fg=MUTED, font=FONT_SM)
         self.lbl_metrike.pack()
 
+        # -- Graf (konvergencija + predvidjeno vs stvarno)
+        k_graf = kartica(levo, "Dijagnostika treninga")
+        k_graf.pack(fill="both", expand=True, pady=(12, 0))
+        self.fig = Figure(figsize=(5, 2.6), dpi=100, facecolor=BG2)
+        self.ax_trosak = self.fig.add_subplot(121)
+        self.ax_pred = self.fig.add_subplot(122)
+        dark_osu(self.ax_trosak, "Obuci model za prikaz")
+        dark_osu(self.ax_pred, "")
+        self.canvas = FigureCanvasTkAgg(self.fig, master=k_graf)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
         # -- Primeri (desna kolona)
         k_primeri = kartica(desno, "Primeri unosa")
         k_primeri.pack(fill="x")
@@ -259,12 +286,35 @@ class TabRegresija(tk.Frame):
         self.kolone = kolone
         X_tr, X_te, y_tr, y_te = podeli_train_test(X, y)
         self.model = LinearnaRegresijaGD(stopa_ucenja=0.05, broj_iteracija=2000).fit(X_tr, y_tr)
-        r2 = r2_skor(y_te, self.model.predict(X_te))
-        rm = rmse(y_te, self.model.predict(X_te))
+        y_pred = self.model.predict(X_te)
+        r2 = r2_skor(y_te, y_pred)
+        rm = rmse(y_te, y_pred)
         self.lbl_metrike.config(
             text=f"R² = {r2:.3f}   |   RMSE = {rm:,.0f} RSD",
             fg=GREEN if r2 > 0.5 else RED
         )
+        self._nacrtaj_dijagnostiku(y_te, y_pred)
+
+    def _nacrtaj_dijagnostiku(self, y_te, y_pred):
+        # 1) konvergencija troska
+        dark_osu(self.ax_trosak)
+        self.ax_trosak.plot(self.model.istorija_troska, color=ACCENT, linewidth=1.2)
+        self.ax_trosak.set_yscale("log")
+        self.ax_trosak.set_title("Trosak (MSE)", fontsize=8)
+        self.ax_trosak.set_xlabel("iteracija")
+
+        # 2) predvidjeno vs stvarno
+        dark_osu(self.ax_pred)
+        self.ax_pred.scatter(y_te, y_pred, s=12, alpha=0.5, color=GREEN, edgecolors="none")
+        lo = float(min(y_te.min(), y_pred.min()))
+        hi = float(max(y_te.max(), y_pred.max()))
+        self.ax_pred.plot([lo, hi], [lo, hi], color=AMBER, linewidth=1, linestyle="--")
+        self.ax_pred.set_title("Predvidjeno vs stvarno", fontsize=8)
+        self.ax_pred.set_xlabel("stvarno")
+        self.ax_pred.set_ylabel("predvidjeno")
+
+        self.fig.tight_layout()
+        self.canvas.draw()
 
     def _predvidi(self):
         if self.model is None:
