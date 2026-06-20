@@ -7,3 +7,4 @@ requires-python = ">=3.10"
 [tool.pytest.ini_options]
 pythonpath = ["kod"]
 testpaths = ["tests"]
+addopts = "-v --tb=short"
