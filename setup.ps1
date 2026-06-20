@@ -6,15 +6,23 @@ $MIN_MAJOR = 3
 $MIN_MINOR = 10
 
 function Find-Python {
-    foreach ($kandidat in @("python", "python3", "python3.11", "python3.10")) {
-        $p = Get-Command $kandidat -ErrorAction SilentlyContinue
-        if (-not $p) { continue }
-        $ver = & $p.Source --version 2>&1
+    # Eksplicitne putanje (conda/venv wrapperi ne blokiraju ove)
+    $explicitni = @(
+        "C:\Python311\python.exe",
+        "C:\Python310\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe"
+    )
+    $kandidati = $explicitni + @("python", "python3", "py")
+    foreach ($kandidat in $kandidati) {
+        try {
+            $ver = & $kandidat --version 2>&1
+        } catch { continue }
         if ($ver -match "Python (\d+)\.(\d+)") {
             $major = [int]$Matches[1]
             $minor = [int]$Matches[2]
             if ($major -gt $MIN_MAJOR -or ($major -eq $MIN_MAJOR -and $minor -ge $MIN_MINOR)) {
-                return $p.Source
+                return $kandidat
             }
         }
     }
