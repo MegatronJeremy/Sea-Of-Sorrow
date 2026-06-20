@@ -1,37 +1,38 @@
--- Primarna baza podataka (Zadatak 1) — SQLite sintaksa
+-- Primarna baza podataka (Zadatak 1) — PostgreSQL sintaksa
 -- Sirovi podaci prikupljeni veb indekserom, pre čišćenja.
+-- Polja koja nisu pronađena u opisu proizvoda ostaju NULL.
 
 CREATE TABLE IF NOT EXISTS proizvodi_primarna (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    id                  SERIAL PRIMARY KEY,
 
     -- identifikacija proizvoda na izvornom sajtu
-    izvor               TEXT        NOT NULL,
-    izvorni_id          TEXT,
+    izvor               TEXT        NOT NULL,           -- npr. 'tehnomanija.rs'
+    izvorni_id          TEXT,                            -- product-id / sku sa sajta
     url                 TEXT        NOT NULL UNIQUE,
 
     -- osnovni atributi
     naziv               TEXT        NOT NULL,
     brend               TEXT,
-    kategorija          TEXT,
-    podkategorija       TEXT,
+    kategorija          TEXT,                            -- npr. 'televizor', 'frizider'
+    podkategorija       TEXT,                            -- slug podkategorije sa sajta
 
     -- cena i dostupnost
-    cena                REAL,
-    cena_pre_akcije     REAL,
-    na_lageru           INTEGER,    -- 0/1 umesto BOOLEAN
+    cena                NUMERIC(12, 2),
+    cena_pre_akcije     NUMERIC(12, 2),
+    na_lageru           BOOLEAN,
 
-    -- najčešće tehničke karakteristike
-    energetska_klasa    TEXT,
-    dijagonala_inch     REAL,
-    kapacitet_kg        REAL,
-    zapremina_l         REAL,
-    snaga_w             REAL,
+    -- najčešće tehničke karakteristike (zajedničke za više kategorija)
+    energetska_klasa    TEXT,                            -- npr. 'A+++', 'E'
+    dijagonala_inch     NUMERIC(6, 2),                   -- televizori
+    kapacitet_kg        NUMERIC(6, 2),                   -- mašine za pranje/sušenje/sudove
+    zapremina_l         NUMERIC(8, 2),                   -- frižideri/zamrzivači/rerne
+    snaga_w             NUMERIC(8, 2),                   -- klima uređaji, aspiratori, itd.
 
-    -- sve sirove tehničke karakteristike kao JSON string (umesto JSONB)
-    sve_karakteristike  TEXT,
+    -- sve sirove tehničke karakteristike sa stranice proizvoda, kao JSON
+    sve_karakteristike  JSONB,
 
-    -- metapodaci
-    datum_preuzimanja   TEXT        NOT NULL DEFAULT (datetime('now'))
+    -- metapodaci o prikupljanju
+    datum_preuzimanja   TIMESTAMP   NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_primarna_kategorija ON proizvodi_primarna (kategorija);

@@ -1,28 +1,29 @@
--- Revidirana (prečišćena) baza podataka (Zadatak 2) — SQLite sintaksa
+-- Revidirana (prečišćena) baza podataka (Zadatak 2) — PostgreSQL sintaksa
 -- Popunjava se iz proizvodi_primarna nakon preprocesiranja (kod/02_analiza/cisti_podatke.py).
+-- Sadrži samo zapise sa adekvatnim brojem popunjenih atributa (min. 7000 zapisa).
 
 CREATE TABLE IF NOT EXISTS proizvodi_revidirana (
-    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    id                   SERIAL PRIMARY KEY,
     primarni_id          INTEGER REFERENCES proizvodi_primarna (id),
 
-    izvor                TEXT    NOT NULL,
-    naziv                TEXT    NOT NULL,
-    brend                TEXT    NOT NULL,
-    kategorija           TEXT    NOT NULL,
+    izvor                TEXT        NOT NULL,
+    naziv                TEXT        NOT NULL,
+    brend                TEXT        NOT NULL,
+    kategorija           TEXT        NOT NULL,
 
-    cena                 REAL    NOT NULL,
-    na_lageru            INTEGER,                -- 0/1
+    cena                 NUMERIC(12, 2) NOT NULL,
+    na_lageru            BOOLEAN,
 
     energetska_klasa     TEXT,
-    energetska_klasa_num INTEGER,               -- G=1 ... A+++=10 (util.py)
-    dijagonala_inch      REAL,
-    kapacitet_kg         REAL,
-    zapremina_l          REAL,
-    snaga_w              REAL,
+    energetska_klasa_num SMALLINT,               -- numerička kodifikacija: G=1 ... A+++=10 (util.py)
+    dijagonala_inch      NUMERIC(6, 2),
+    kapacitet_kg         NUMERIC(6, 2),
+    zapremina_l          NUMERIC(8, 2),
+    snaga_w              NUMERIC(8, 2),
 
-    sve_karakteristike   TEXT,                  -- JSON string
+    sve_karakteristike   JSONB,
 
-    datum_preuzimanja    TEXT
+    datum_preuzimanja    TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_revid_kategorija ON proizvodi_revidirana (kategorija);

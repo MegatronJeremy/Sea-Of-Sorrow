@@ -55,8 +55,10 @@ def proveri_pakete() -> None:
     naslov("2. Python paketi (requirements.txt)")
     paketi = [
         ("requests",       "requests"),
+        ("curl_cffi",      "curl_cffi"),
         ("bs4",            "beautifulsoup4"),
         ("lxml",           "lxml"),
+        ("psycopg2",       "psycopg2-binary"),
         ("dotenv",         "python-dotenv"),
         ("pandas",         "pandas"),
         ("numpy",          "numpy"),
@@ -82,7 +84,7 @@ def proveri_env() -> None:
     env_fajl = _ROOT / ".env"
     example = _ROOT / ".env.example"
     if not env_fajl.exists():
-        print(f"{INFO}.env fajl ne postoji — koristi se podrazumevano: podaci/psz.db")
+        print(f"{WARN}.env fajl ne postoji. Kopiraj ga i upiši PostgreSQL lozinku:")
         print(f"      cp {example} {env_fajl}")
         return
 
@@ -98,28 +100,25 @@ def proveri_env() -> None:
 
 
 def proveri_bazu() -> None:
-    naslov("4. Konekcija na bazu (SQLite)")
+    naslov("4. Konekcija na bazu (PostgreSQL)")
     try:
-        from zajednicko.db import DB_PATH, get_connection
-        from pathlib import Path
-        print(f"{INFO}Putanja: {DB_PATH}")
-        if not Path(DB_PATH).exists():
-            print(f"{WARN}Baza ne postoji. Pokreni: .\\run.ps1 setup")
-            return
+        from zajednicko.db import DB_HOST, DB_NAME, DB_PORT, DB_USER, get_connection
+        print(f"{INFO}{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute("SELECT sqlite_version();")
+        cur.execute("SELECT version();")
         ver = cur.fetchone()[0]
         conn.close()
-        print(f"{OK}Konekcija uspela. SQLite {ver}")
+        print(f"{OK}Konekcija uspela. {textwrap.shorten(ver, 55)}")
     except Exception as e:
         print(f"{ERR}Konekcija neuspela: {e}")
+        print(f"      Proveri da je PostgreSQL pokrenut i DB_* u .env (ili .\\run.ps1 setup).")
         return
 
     try:
         from zajednicko.db import cursor as db_cursor
         with db_cursor() as cur:
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+            cur.execute("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;")
             tabele = [r[0] for r in cur.fetchall()]
         if tabele:
             print(f"\n{INFO}Tabele u bazi:")

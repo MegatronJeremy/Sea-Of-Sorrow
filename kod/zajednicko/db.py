@@ -1,54 +1,56 @@
 """
-Konekcija na SQLite bazu (bez eksternih zavisnosti — sqlite3 je deo Pythona).
+Konekcija na PostgreSQL bazu.
 
-Putanja do .db fajla se čita iz .env (DB_PATH), podrazumevano:
-    <koren_projekta>/podaci/psz.db
+Čita parametre konekcije iz .env fajla (vidi .env.example u korenu projekta).
+Koristi se iz svih podfoldera (crawler, analiza, aplikacija) preko:
 
-Koristi se iz svih podfoldera:
     from zajednicko.db import get_connection, cursor, run_sql_file
 """
+from __future__ import annotations
+
 import os
-import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+import psycopg2
+import psycopg2.extras
 from dotenv import load_dotenv
 
 _ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(_ROOT / ".env")
 
-DB_PATH = os.getenv("DB_PATH", str(_ROOT / "podaci" / "psz.db"))
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "psz_primarna")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
 
-def get_connection(db_path: str | None = None) -> sqlite3.Connection:
-    """Otvara SQLite konekciju. Kreira fajl i direktorijum ako ne postoje."""
-    path = db_path or DB_PATH
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row   # redovi se ponašaju kao rečnici
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+def get_connection(dbname: str | None = None):
+    """Vraća novu psycopg2 konekciju. Po default-u koristi DB_NAME iz .env."""
+    return psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=dbname or DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
 
 
 @contextmanager
-def cursor(db_path: str | None = None, dict_cursor: bool = False):
+def cursor(dbname: str | None = None, dict_cursor: bool = False):
     """Context manager koji otvara konekciju + kursor i commituje na izlazu.
 
-    dict_cursor=True: fetchall/fetchone vraćaju obične dict-ove umesto Row objekata.
+    dict_cursor=True: redovi se vraćaju kao rečnici (RealDictCursor).
 
     Primer:
         with cursor() as cur:
             cur.execute("SELECT 1")
     """
-    conn = get_connection(db_path)
+    conn = get_connection(dbname)
     try:
-        cur = conn.cursor()
-        if dict_cursor:
-            _orig_fetchall = cur.fetchall
-            _orig_fetchone = cur.fetchone
-            cur.fetchall = lambda: [dict(r) for r in _orig_fetchall()]
-            cur.fetchone = lambda: (lambda r: dict(r) if r else None)(_orig_fetchone())
+        cur_factory = psycopg2.extras.RealDictCursor if dict_cursor else None
+        cur = conn.cursor(cursor_factory=cur_factory)
         yield cur
         conn.commit()
     except Exception:
@@ -58,11 +60,31 @@ def cursor(db_path: str | None = None, dict_cursor: bool = False):
         conn.close()
 
 
-def run_sql_file(path: str, db_path: str | None = None) -> None:
-    """Izvršava ceo .sql fajl (npr. šemu baze)."""
-    sql = Path(path).read_text(encoding="utf-8")
-    conn = get_connection(db_path)
+def kreiraj_bazu_ako_ne_postoji(dbname: str | None = None) -> bool:
+    """Kreira bazu (CREATE DATABASE) ako ne postoji — povezuje se na sistemsku
+    'postgres' bazu. Vraća True ako je baza upravo kreirana.
+
+    Ovo zamenjuje `createdb` CLI komandu, pa nije potreban psql u PATH-u.
+    """
+    cilj = dbname or DB_NAME
+    conn = psycopg2.connect(
+        host=DB_HOST, port=DB_PORT, dbname="postgres",
+        user=DB_USER, password=DB_PASSWORD,
+    )
     try:
-        conn.executescript(sql)
+        conn.autocommit = True  # CREATE DATABASE ne sme u transakciji
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s;", (cilj,))
+            if cur.fetchone():
+                return False
+            cur.execute(f'CREATE DATABASE "{cilj}";')
+            return True
     finally:
         conn.close()
+
+
+def run_sql_file(path: str, dbname: str | None = None) -> None:
+    """Izvršava ceo .sql fajl (npr. šemu baze) nad zadatom bazom."""
+    sql = Path(path).read_text(encoding="utf-8")
+    with cursor(dbname) as cur:
+        cur.execute(sql)

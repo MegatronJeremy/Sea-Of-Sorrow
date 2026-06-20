@@ -1,5 +1,6 @@
 requests>=2.31
 curl_cffi>=0.7        # imitira Chrome TLS fingerprint (zaobilazi Cloudflare 403)
+psycopg2-binary>=2.9  # PostgreSQL drajver
 beautifulsoup4>=4.12
 lxml>=5.0
 python-dotenv>=1.0
@@ -9,4 +10,3 @@ matplotlib>=3.8
 xlsxwriter>=3.2
 scikit-learn>=1.4   # samo za verifikaciju sopstvenih ML implementacija (zadaci 4/5/6)
 pytest>=8.0
-# sqlite3 je deo Python standardne biblioteke — nema posebne instalacije

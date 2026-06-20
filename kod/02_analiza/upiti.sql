@@ -33,14 +33,13 @@ ORDER BY cena DESC
 LIMIT 30;
 
 -- 6) Prosečna, minimalna i maksimalna cena po kategoriji
---    (std. devijacija ručno: sqrt(avg(x^2) - avg(x)^2) jer SQLite nema stddev)
 SELECT
     kategorija,
-    count(*)                                                       AS broj_proizvoda,
-    round(avg(cena), 2)                                            AS prosecna_cena,
-    min(cena)                                                      AS min_cena,
-    max(cena)                                                      AS max_cena,
-    round(sqrt(avg(cena * cena) - avg(cena) * avg(cena)), 2)      AS std_cena
+    count(*)                        AS broj_proizvoda,
+    round(avg(cena), 2)             AS prosecna_cena,
+    min(cena)                       AS min_cena,
+    max(cena)                       AS max_cena,
+    round(stddev(cena), 2)          AS std_cena
 FROM proizvodi_revidirana
 GROUP BY kategorija
 ORDER BY prosecna_cena DESC;

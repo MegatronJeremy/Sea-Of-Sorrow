@@ -10,7 +10,7 @@ setup:
 install:
 	pip install -r requirements.txt
 
-## Inicijalizacija SQLite baze (kreira podaci/psz.db automatski)
+## Inicijalizacija PostgreSQL baze (kreira bazu + tabele)
 db-init:
 	python kod/db_init.py
 
@@ -78,7 +78,7 @@ help:
 	@echo "Dostupne komande:"
 	@echo "  make setup        -- instaliraj zavisnosti + inicijalizuj bazu"
 	@echo "  make install      -- pip install -r requirements.txt"
-	@echo "  make db-init      -- kreiraj SQLite bazu (podaci/psz.db)"
+	@echo "  make db-init      -- kreiraj PostgreSQL bazu + tabele"
 	@echo ""
 	@echo "  make discover     -- proveri kategorije na sajtu (bez upisa)"
 	@echo "  make test-crawl KAT=frizider  -- testiraj parser za jednu kategoriju"

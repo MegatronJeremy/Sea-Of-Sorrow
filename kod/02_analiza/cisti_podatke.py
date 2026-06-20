@@ -94,13 +94,13 @@ def upisi_u_revidiranu(df: pd.DataFrame) -> None:
         "kapacitet_kg", "zapremina_l", "snaga_w", "sve_karakteristike",
         "datum_preuzimanja",
     ]
-    placeholder = ", ".join(["?"] * (len(kolone) + 1))
+    placeholder = ", ".join(["%s"] * (len(kolone) + 1))
     sql = f"""INSERT INTO proizvodi_revidirana
               (primarni_id, {", ".join(kolone)})
               VALUES ({placeholder})"""
 
     with cursor() as cur:
-        cur.execute("DELETE FROM proizvodi_revidirana;")
+        cur.execute("TRUNCATE TABLE proizvodi_revidirana RESTART IDENTITY;")
         for _, red in df.iterrows():
             vrednosti = [red.get("id")]
             for k in kolone:

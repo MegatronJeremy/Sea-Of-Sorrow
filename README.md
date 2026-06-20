@@ -7,7 +7,7 @@ prikupljanje, analiza, vizuelizacija i mašinsko učenje nad podacima o
 proizvodima bele tehnike sa srpskih onlajn prodavnica.
 
 **Izvor podataka:** [Tehnomanija](https://www.tehnomanija.rs)
-**Baza:** SQLite (bez instalacije — deo Pythona) · **Jezik:** Python 3.10+ · **GUI:** Tkinter
+**Baza:** PostgreSQL · **Jezik:** Python 3.10+ · **GUI:** Tkinter
 
 ---
 
@@ -29,13 +29,17 @@ proizvodima bele tehnike sa srpskih onlajn prodavnica.
 
 ---
 
+## Preduslov: PostgreSQL
+
+Postavka zahteva PostgreSQL (ili MySQL). Instaliraj PostgreSQL za Windows sa
+<https://www.postgresql.org/download/windows/> i zapamti lozinku `postgres`
+korisnika. Setup skripta sama kreira bazu i tabele — nije potreban `createdb`.
+
 ## Brzo pokretanje (Windows)
 
-Sve ide preko dve PowerShell skripte — nije potrebno ručno praviti venv ni
-instalirati bazu.
-
 ```powershell
-# 1. Setup: pronalazi Python 3.10+, pravi .venv, instalira zavisnosti, pravi bazu
+# 1. Setup: pronalazi Python 3.10+, pravi .venv, instalira zavisnosti,
+#    kreira .env i inicijalizuje PostgreSQL bazu (upisi DB_PASSWORD u .env)
 .\setup.ps1
 
 # 2. Pokretanje komandi — interaktivni meni:
@@ -63,7 +67,7 @@ Crawl podržava i opcije: `.\run.ps1 crawl -Kat frizider -Workers 6`
 Sea-Of-Sorrow/
 ├── kod/
 │   ├── zajednicko/          # deljeni moduli
-│   │   ├── db.py            # konekcija na SQLite (podaci/psz.db)
+│   │   ├── db.py            # konekcija na PostgreSQL (čita .env)
 │   │   └── util.py          # energetske klase, export, skaliranje
 │   ├── 01_crawler/          # Zadatak 1: veb indekser + parser
 │   │   ├── config.py        # kategorije, throttling, CSS selektori
@@ -77,13 +81,13 @@ Sea-Of-Sorrow/
 │   ├── 05_klasterovanje/    # Zadatak 5: K-means
 │   ├── 06_preporuke/        # Zadatak 6: recommender
 │   ├── aplikacija/          # Tkinter GUI (objedinjuje 4, 5, 6)
-│   ├── db_init.py           # kreiranje SQLite šeme
+│   ├── db_init.py           # kreira PostgreSQL bazu + tabele
 │   └── debug.py             # rich debug provera okruženja
-├── baza/                    # SQL šeme (SQLite sintaksa)
+├── baza/                    # SQL šeme (PostgreSQL sintaksa)
 │   ├── 01_schema_primarna.sql
 │   └── 02_schema_revidirana.sql
 ├── izvestaj/                # Excel izvozi + grafici/ (PNG)
-├── podaci/                  # SQLite baza + sirovi podaci (gitignored)
+├── podaci/                  # sirovi podaci / HTML (gitignored)
 ├── tests/                   # 122 pytest testa (rade bez baze/interneta)
 ├── setup.ps1 · run.ps1      # Windows skripte
 ├── Makefile                 # prečice (Linux/Mac)

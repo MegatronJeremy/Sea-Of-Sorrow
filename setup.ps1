@@ -72,16 +72,29 @@ Write-Host "Instaliram zavisnosti (pip install -r requirements.txt)..." -Foregro
 if (-not $?) { Write-Host "GRESKA pri instalaciji!" -ForegroundColor Red; exit 1 }
 Write-Host "OK zavisnosti instalirane" -ForegroundColor Green
 
-# 4) Inicijalizuj SQLite bazu
-Write-Host "Inicijalizujem SQLite bazu..." -ForegroundColor Cyan
+# 4) .env fajl (kopiraj iz .env.example ako ne postoji)
+if (-not (Test-Path ".env")) {
+    Copy-Item ".env.example" ".env"
+    Write-Host "Kreiran .env iz .env.example — UPISI svoju PostgreSQL lozinku u .env (DB_PASSWORD)." -ForegroundColor Yellow
+}
+
+# 5) Inicijalizuj PostgreSQL bazu (kreira bazu + tabele)
+Write-Host "Inicijalizujem PostgreSQL bazu..." -ForegroundColor Cyan
 & .venv\Scripts\python kod\db_init.py
-if (-not $?) { Write-Host "GRESKA pri inicijalizaciji baze!" -ForegroundColor Red; exit 1 }
+if (-not $?) {
+    Write-Host ""
+    Write-Host "Baza nije inicijalizovana. Najcesci uzrok: PostgreSQL nije instaliran/pokrenut." -ForegroundColor Yellow
+    Write-Host "1. Instaliraj PostgreSQL: https://www.postgresql.org/download/windows/" -ForegroundColor White
+    Write-Host "2. Upisi DB_PASSWORD (lozinka 'postgres' korisnika) u .env" -ForegroundColor White
+    Write-Host "3. Ponovo pokreni: .\setup.ps1" -ForegroundColor White
+    exit 1
+}
 
 Write-Host ""
 Write-Host "=== Setup gotov! ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "Aktiviraj venv i pokreni projekat:" -ForegroundColor Cyan
-Write-Host "  .venv\Scripts\activate" -ForegroundColor White
-Write-Host "  make discover" -ForegroundColor White
-Write-Host "  make test" -ForegroundColor White
+Write-Host "Pokreni projekat:" -ForegroundColor Cyan
+Write-Host "  .\run.ps1            (interaktivni meni)" -ForegroundColor White
+Write-Host "  .\run.ps1 crawl      (prikupi podatke)" -ForegroundColor White
+Write-Host "  .\run.ps1 test       (testovi)" -ForegroundColor White
 Write-Host ""
