@@ -27,15 +27,16 @@ from regresija import LinearnaRegresijaGD, pripremi_podatke, podeli_train_test, 
 from kmeans import KMeans, silhouette_score_rucno, interpretiraj_klaster                        # noqa: E402
 from recommender import ContentBasedRecommender                                                  # noqa: E402
 
-# ── Paleta boja ───────────────────────────────────────────────────────────────
-BG       = "#0d1117"   # pozadina (GitHub dark)
-BG2      = "#161b22"   # karte / frejmovi
-BORDER   = "#30363d"   # ivice
-ACCENT   = "#58a6ff"   # plava (naglasak)
-GREEN    = "#3fb950"   # uspeh
-RED      = "#f85149"   # greška
-TEXT     = "#e6edf3"   # glavni tekst
-MUTED    = "#8b949e"   # sekundarni tekst
+# ── Paleta boja (NERV / MAGI terminal estetika) ───────────────────────────────
+BG       = "#020403"   # skoro crna pozadina
+BG2      = "#0a0f0c"   # karte / frejmovi (tamno zelenkasta)
+BORDER   = "#1f3d2b"   # prigusene zelene ivice
+ACCENT   = "#00ff41"   # neon matrix zelena (naglasak)
+GREEN    = "#00ff41"   # uspeh
+AMBER    = "#ff9f1c"   # NERV amber (sekundarni naglasak)
+RED      = "#ff003c"   # alarm crvena
+TEXT     = "#b6ffcb"   # glavni tekst (svetlo zelena)
+MUTED    = "#4f8c6a"   # sekundarni tekst (prigusena zelena)
 FONT     = ("Consolas", 10)
 FONT_SM  = ("Consolas", 9)
 FONT_LG  = ("Consolas", 13, "bold")
@@ -50,11 +51,12 @@ def ucitaj_revidiranu() -> pd.DataFrame:
 
 
 def stil_btn(btn: tk.Button, tip: str = "primary"):
-    boja = ACCENT if tip == "primary" else "#238636"
+    boja = ACCENT if tip == "primary" else AMBER
     btn.config(
-        bg=boja, fg=BG, font=FONT, relief="flat", bd=0,
-        activebackground=TEXT, activeforeground=BG,
-        cursor="hand2", padx=12, pady=5
+        bg=BG, fg=boja, font=("Consolas", 10, "bold"), relief="flat", bd=0,
+        activebackground=boja, activeforeground=BG,
+        highlightthickness=1, highlightbackground=boja, highlightcolor=boja,
+        cursor="hand2", padx=14, pady=6
     )
 
 
@@ -120,17 +122,29 @@ class Aplikacija(tk.Tk):
                        font=FONT_SM, relief="flat")
         stil.map("Treeview", background=[("selected", BORDER)])
 
-        # Header
-        hdr = tk.Frame(self, bg=BG2, height=48)
+        # Header (NERV/MAGI stil)
+        hdr = tk.Frame(self, bg=BG2, height=58)
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
-        tk.Label(hdr, text="⬡  PSZ PROJEKAT", bg=BG2, fg=ACCENT,
-                 font=("Consolas", 13, "bold")).pack(side="left", padx=20, pady=12)
+
+        levo_hdr = tk.Frame(hdr, bg=BG2)
+        levo_hdr.pack(side="left", padx=20, pady=8)
+        tk.Label(levo_hdr, text="◤ P S Z · M A G I ◢", bg=BG2, fg=ACCENT,
+                 font=("Consolas", 14, "bold")).pack(anchor="w")
+        tk.Label(levo_hdr, text="SISTEM ZA PRONALAZENJE SKRIVENOG ZNANJA",
+                 bg=BG2, fg=MUTED, font=("Consolas", 8)).pack(anchor="w")
 
         self.df = ucitaj_revidiranu()
         n = len(self.df)
-        tk.Label(hdr, text=f"{n} proizvoda u bazi", bg=BG2, fg=MUTED,
-                 font=FONT_SM).pack(side="right", padx=20)
+        desno_hdr = tk.Frame(hdr, bg=BG2)
+        desno_hdr.pack(side="right", padx=20, pady=8)
+        tk.Label(desno_hdr, text="● ONLINE", bg=BG2, fg=GREEN,
+                 font=("Consolas", 9, "bold")).pack(anchor="e")
+        tk.Label(desno_hdr, text=f"DB: {n} ZAPISA", bg=BG2, fg=AMBER,
+                 font=("Consolas", 9)).pack(anchor="e")
+
+        # tanka razdelna linija (scanline)
+        tk.Frame(self, bg=ACCENT, height=1).pack(fill="x")
 
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=0, pady=0)
