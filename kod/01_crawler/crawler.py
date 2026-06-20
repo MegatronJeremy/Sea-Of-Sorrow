@@ -106,7 +106,7 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
     _counter_lock = threading.Lock()
     _zavrseno = 0
 
-    def _preuzmi_i_parsiraj(href: str, naziv: str, ukupno: int) -> tuple[int, dict | None]:
+    def _preuzmi_i_parsiraj(href: str, naziv: str, ukupno: int) -> tuple[int, dict | None, str]:
         nonlocal _zavrseno
         fetcher_local = Fetcher()
         url_proizvoda = apsolutni_url(href)
@@ -116,9 +116,11 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
             br = _zavrseno
             print(f"  [{br:>2}/{ukupno}] preuzeto...", end="\r", flush=True)
         if resp_p is None:
-            return br, None
+            return br, None, "HTTP greška (verovatno 403/timeout posle svih pokušaja)"
         podaci = parsiraj_proizvod(resp_p.text, url_proizvoda, naziv)
-        return br, podaci
+        if podaci is None:
+            return br, None, "parsiranje nije uspelo (struktura stranice?)"
+        return br, podaci, ""
 
     fetcher = Fetcher()
     stavke = list(KATEGORIJE.items())
@@ -149,20 +151,20 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
             with _counter_lock:
                 _zavrseno = 0
 
-            rezultati: dict[int, dict | None] = {}
+            rezultati: dict[int, tuple[dict | None, str]] = {}
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures = {
                     pool.submit(_preuzmi_i_parsiraj, href, naziv, n): i
                     for i, href in enumerate(linkovi, 1)
                 }
                 for future in as_completed(futures):
-                    redni, podaci = future.result()
-                    rezultati[redni] = podaci
+                    redni, podaci, razlog = future.result()
+                    rezultati[redni] = (podaci, razlog)
 
             # ispis u redu i upis u bazu
             print(" " * 40, end="\r")  # obrisi progress liniju
             ok = greska = 0
-            for i, podaci in sorted(rezultati.items()):
+            for i, (podaci, razlog) in sorted(rezultati.items()):
                 if podaci:
                     naziv_kratko = podaci["naziv"][:55]
                     print(f"    OK  {naziv_kratko}")
@@ -171,7 +173,8 @@ def run(kategorija_naziv: str | None, max_stranica: int, workers: int = 0):
                     ok += 1
                 else:
                     url_pao = apsolutni_url(linkovi[i - 1])
-                    print(f"    GRESKA  {url_pao}")
+                    print(f"    GRESKA  {razlog}")
+                    print(f"            {url_pao}")
                     greska += 1
             print(f"  => {ok} upisano, {greska} greška  (ukupno u sesiji: {ukupno_upisano})")
 
