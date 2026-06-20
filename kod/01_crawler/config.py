@@ -27,7 +27,6 @@ KATEGORIJE: dict[str, str] = {
     "bela-tehnika/mikrotalasne": "mikrotalasna",
     "bela-tehnika/aspiratori": "aspirator",
     "bela-tehnika/bojleri": "bojler",
-    "tv-foto-audio-i-video/televizori": "televizor",
 }
 
 # Najveći broj stranica po kategoriji koji se obilazi (zaštita od beskonačnog crawl-a;
