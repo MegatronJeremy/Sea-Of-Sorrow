@@ -406,9 +406,13 @@ class TabPreporuke(tk.Frame):
 
         kolone = ("id", "naziv", "brend", "cena", "slicnost")
         sirine  = (50, 380, 100, 90, 80)
+        # kolone sa numerickim sortiranjem (ostale idu leksikografski)
+        self._num_kolone = {"id", "cena", "slicnost"}
+        self._sort_obrnuto: dict[str, bool] = {}
         self.tabela = ttk.Treeview(k_rez, columns=kolone, show="headings", height=8)
         for kol, sir in zip(kolone, sirine):
-            self.tabela.heading(kol, text=kol)
+            self.tabela.heading(kol, text=kol,
+                                command=lambda k=kol: self._sortiraj(k))
             self.tabela.column(kol, width=sir, anchor="w")
         self.tabela.pack(fill="both", expand=True, padx=4, pady=4)
 
@@ -437,6 +441,33 @@ class TabPreporuke(tk.Frame):
         self.id_entry.insert(0, str(pid))
         self.id_entry.config(fg=TEXT)
         self._preporuci()
+
+    def _sortiraj(self, kol: str):
+        obrnuto = self._sort_obrnuto.get(kol, False)
+        redovi = [(self.tabela.set(r, kol), r) for r in self.tabela.get_children()]
+
+        if kol in self._num_kolone:
+            def kljuc(par):
+                # izvuci broj iz npr. "75,000 RSD" ili "0.526"
+                ciscen = par[0].replace(",", "").replace("RSD", "").strip()
+                try:
+                    return float(ciscen)
+                except ValueError:
+                    return float("-inf")
+        else:
+            def kljuc(par):
+                return par[0].lower()
+
+        redovi.sort(key=kljuc, reverse=obrnuto)
+        for indeks, (_, r) in enumerate(redovi):
+            self.tabela.move(r, "", indeks)
+
+        # strelica u zaglavlju + obrni smer za sledeci klik
+        for k in self.tabela["columns"]:
+            self.tabela.heading(k, text=k)
+        strelica = " ▼" if obrnuto else " ▲"
+        self.tabela.heading(kol, text=kol + strelica)
+        self._sort_obrnuto[kol] = not obrnuto
 
     def _preporuci(self):
         try:
