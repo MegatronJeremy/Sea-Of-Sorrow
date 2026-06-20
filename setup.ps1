@@ -66,12 +66,8 @@ Write-Host "OK zavisnosti instalirane" -ForegroundColor Green
 
 # 4) Inicijalizuj SQLite bazu
 Write-Host "Inicijalizujem SQLite bazu..." -ForegroundColor Cyan
-& .venv\Scripts\python -c @"
-import sys; sys.path.insert(0,'kod')
-from zajednicko.db import run_sql_file
-run_sql_file('baza/01_schema_primarna.sql')
-print('OK baza: podaci/psz.db')
-"@
+$initSkript = "import sys; sys.path.insert(0,'kod'); from zajednicko.db import run_sql_file; run_sql_file('baza/01_schema_primarna.sql'); print('OK baza: podaci/psz.db')"
+& .venv\Scripts\python -c $initSkript
 if (-not $?) { Write-Host "GRESKA pri inicijalizaciji baze!" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
