@@ -100,16 +100,20 @@ def run(kategorija_naziv: str | None, max_stranica: int):
             linkovi, sledeca = parsiraj_listing(resp.text)
             print(f"  strana {stranica}: {len(linkovi)} proizvoda")
 
-            for href in linkovi:
+            for i, href in enumerate(linkovi, 1):
                 url_proizvoda = apsolutni_url(href)
+                print(f"    [{i}/{len(linkovi)}] {url_proizvoda}", end="", flush=True)
                 resp_p = fetcher.get(url_proizvoda)
                 if resp_p is None:
+                    print(" — GREŠKA")
                     continue
                 podaci = parsiraj_proizvod(resp_p.text, url_proizvoda, naziv)
                 if podaci is None:
+                    print(" — nije prepoznato")
                     continue
                 upsert_proizvod(podaci)
                 ukupno_upisano += 1
+                print(f" — OK ({podaci['naziv'][:50]})")
 
             url = apsolutni_url(sledeca) if sledeca else None
             stranica += 1
