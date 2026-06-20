@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS proizvodi_revidirana (
 
     energetska_klasa     TEXT,
     energetska_klasa_num SMALLINT,               -- numerička kodifikacija: G=1 ... A+++=10 (util.py)
-    dijagonala_inch      NUMERIC(6, 2),
-    kapacitet_kg         NUMERIC(6, 2),
-    zapremina_l          NUMERIC(8, 2),
-    snaga_w              NUMERIC(8, 2),
+    dijagonala_inch      NUMERIC(12, 2),
+    kapacitet_kg         NUMERIC(12, 2),
+    zapremina_l          NUMERIC(12, 2),
+    snaga_w              NUMERIC(12, 2),
 
     sve_karakteristike   JSONB,
 

@@ -22,11 +22,13 @@ CREATE TABLE IF NOT EXISTS proizvodi_primarna (
     na_lageru           BOOLEAN,
 
     -- najčešće tehničke karakteristike (zajedničke za više kategorija)
+    -- široka preciznost (12,2) da realne i povremeno pogrešno isparsirane
+    -- vrednosti (npr. 12000 BTU) ne izazovu numeric overflow
     energetska_klasa    TEXT,                            -- npr. 'A+++', 'E'
-    dijagonala_inch     NUMERIC(6, 2),                   -- televizori
-    kapacitet_kg        NUMERIC(6, 2),                   -- mašine za pranje/sušenje/sudove
-    zapremina_l         NUMERIC(8, 2),                   -- frižideri/zamrzivači/rerne
-    snaga_w             NUMERIC(8, 2),                   -- klima uređaji, aspiratori, itd.
+    dijagonala_inch     NUMERIC(12, 2),                  -- televizori
+    kapacitet_kg        NUMERIC(12, 2),                  -- mašine za pranje/sušenje/sudove
+    zapremina_l         NUMERIC(12, 2),                  -- frižideri/zamrzivači/rerne
+    snaga_w             NUMERIC(12, 2),                  -- klima uređaji, aspiratori, itd.
 
     -- sve sirove tehničke karakteristike sa stranice proizvoda, kao JSON
     sve_karakteristike  JSONB,
