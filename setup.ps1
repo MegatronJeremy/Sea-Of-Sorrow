@@ -1,4 +1,4 @@
-# PSZ projekat — automatski setup (PowerShell)
+﻿# PSZ projekat - automatski setup (PowerShell)
 # Koristi se: .\setup.ps1
 # Proverava Python verziju, pravi venv i instalira zavisnosti.
 
@@ -46,7 +46,7 @@ if (Test-Path $venvPython) {
             Write-Host "OK .venv vec postoji ($venvVer)" -ForegroundColor Green
             $praviVenv = $false
         } else {
-            Write-Host "UPOZ: .venv ima $venvVer — brisem i pravim novi..." -ForegroundColor Yellow
+            Write-Host "UPOZ: .venv ima $venvVer - brisem i pravim novi..." -ForegroundColor Yellow
             Remove-Item -Recurse -Force .venv
         }
     }
