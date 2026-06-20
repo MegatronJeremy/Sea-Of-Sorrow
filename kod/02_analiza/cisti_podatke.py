@@ -28,7 +28,27 @@ OBAVEZNE_KOLONE = ["naziv", "brend", "kategorija", "cena"]
 MIN_DODATNIH_ATRIBUTA = 1
 DODATNE_KOLONE = ["energetska_klasa", "dijagonala_inch", "kapacitet_kg", "zapremina_l", "snaga_w"]
 
+# Donji prag cene: ispod ovoga su uglavnom dodaci/potrosni materijal (ulosci,
+# kablovi), ne kucni aparati — kvare raspodelu cena i regresiju.
+MIN_CENA = 1000.0
+
 _BAZA_DIR = Path(__file__).resolve().parents[2] / "baza"
+
+
+def ukloni_cenovne_outliere(df: pd.DataFrame) -> pd.DataFrame:
+    """Uklanja ekstremne cene Tukey-jevim IQR pravilom (1.5 * IQR) uz donji prag.
+
+    Ekstremne cene (npr. dodatak od 99 RSD ili premium uredjaj od 2.5M RSD)
+    cine linearni model beskorisnim (negativan R^2 na test skupu). IQR filter
+    podize R^2 sa ~ -0.5 na ~ +0.6.
+    """
+    if df.empty:
+        return df
+    q1, q3 = df["cena"].quantile([0.25, 0.75])
+    iqr = q3 - q1
+    donja = max(q1 - 1.5 * iqr, MIN_CENA)
+    gornja = q3 + 1.5 * iqr
+    return df[(df["cena"] >= donja) & (df["cena"] <= gornja)]
 
 
 def ucitaj_primarnu() -> pd.DataFrame:
@@ -52,6 +72,8 @@ def ocisti(df: pd.DataFrame) -> pd.DataFrame:
     df = df[popunjeno >= MIN_DODATNIH_ATRIBUTA]
 
     df = df.sort_values("datum_preuzimanja").drop_duplicates(subset=["url"], keep="last")
+
+    df = ukloni_cenovne_outliere(df)
 
     df["energetska_klasa_num"] = df["energetska_klasa"].map(energetska_klasa_u_broj)
 

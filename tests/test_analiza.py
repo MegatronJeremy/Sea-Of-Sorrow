@@ -31,7 +31,9 @@ class TestOcisti:
             "naziv": [f"Proizvod {i}" for i in range(1, n + 1)],
             "brend": rng.choice(["Samsung", "LG", "Bosch"], size=n),
             "kategorija": rng.choice(["frizider", "televizor"], size=n),
-            "cena": rng.uniform(10_000, 150_000, size=n).round(2),
+            # ravnomerno rasporedjene cene bez outliera — IQR filter ih ne dira,
+            # pa per-filter testovi ostaju deterministicni
+            "cena": np.linspace(30_000, 90_000, n).round(2),
             "na_lageru": True,
             "energetska_klasa": rng.choice(["A", "B", "C", "D"], size=n),
             "dijagonala_inch": rng.uniform(32, 75, size=n).round(1),
@@ -78,13 +80,13 @@ class TestOcisti:
         # dupliraj prvi red sa istim URL-om ali kasnijim datumom
         duplikat = df.iloc[[0]].copy()
         duplikat["datum_preuzimanja"] = pd.Timestamp("2025-06-01")
-        duplikat["cena"] = 99999.0
+        duplikat["cena"] = 75000.0  # u opsegu, da ga IQR filter ne dira
         df = pd.concat([df, duplikat], ignore_index=True)
         ociscen = ocisti(df.copy())
         assert len(ociscen) == 10
-        # treba da ostane noviji (cena 99999)
+        # treba da ostane noviji (cena 75000)
         idx = ociscen[ociscen["url"] == df.loc[0, "url"]].index
-        assert ociscen.loc[idx[0], "cena"] == pytest.approx(99999.0)
+        assert ociscen.loc[idx[0], "cena"] == pytest.approx(75000.0)
 
     def test_dodaje_energetska_klasa_num(self):
         df = self._pravi_df(5)
@@ -108,6 +110,16 @@ class TestOcisti:
                                    "datum_preuzimanja", "url"] + DODATNE_KOLONE)
         ociscen = ocisti(df)
         assert len(ociscen) == 0
+
+    def test_uklanja_cenovne_outliere(self):
+        # 18 normalnih cena + 1 ekstremno jeftin dodatak + 1 ekstremno skup uredjaj
+        df = self._pravi_df(20)
+        df.loc[0, "cena"] = 99.0          # dodatak
+        df.loc[1, "cena"] = 2_500_000.0   # premium outlier
+        ociscen = ocisti(df.copy())
+        assert 99.0 not in ociscen["cena"].values
+        assert 2_500_000.0 not in ociscen["cena"].values
+        assert len(ociscen) == 18
 
 
 class TestObavezneFunkcije:
