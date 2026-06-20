@@ -173,13 +173,133 @@ class Aplikacija(tk.Tk):
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=0, pady=0)
 
+        self.tab_pregled       = TabPregledBaze(notebook, self.df)
         self.tab_regresija     = TabRegresija(notebook, self.df)
         self.tab_klasterovanje = TabKlasterovanje(notebook, self.df)
         self.tab_preporuke     = TabPreporuke(notebook, self.df)
 
+        notebook.add(self.tab_pregled,       text="  Pregled baze  ")
         notebook.add(self.tab_regresija,     text="  Regresija cene  ")
         notebook.add(self.tab_klasterovanje, text="  Klasterovanje  ")
         notebook.add(self.tab_preporuke,     text="  Preporuke  ")
+
+
+# ── Tab 0: Pregled baze ───────────────────────────────────────────────────────
+
+class TabPregledBaze(tk.Frame):
+    """Read-only pregled revidirane baze: statistika, broj po kategoriji, tabela."""
+
+    def __init__(self, master, df: pd.DataFrame):
+        super().__init__(master, bg=BG)
+        self.df = df
+
+        # — Gornji panel: sažeta statistika —
+        stat = kartica(self, "Statistika baze")
+        stat.pack(fill="x", padx=20, pady=(20, 10))
+
+        ukupno = len(df)
+        br_kat = df["kategorija"].nunique()
+        br_brendova = df["brend"].nunique()
+        cmin, cmax = df["cena"].min(), df["cena"].max()
+        pct_energ = 100 * df["energetska_klasa_num"].notna().mean() if ukupno else 0
+
+        redovi_stat = [
+            ("Ukupno zapisa", f"{ukupno:,}"),
+            ("Kategorija", str(br_kat)),
+            ("Brendova", str(br_brendova)),
+            ("Raspon cena", f"{cmin:,.0f} – {cmax:,.0f} RSD"),
+            ("Sa energ. klasom", f"{pct_energ:.0f}%"),
+        ]
+        red_frame = tk.Frame(stat, bg=BG2)
+        red_frame.pack(fill="x", padx=10, pady=8)
+        for i, (naziv, vred) in enumerate(redovi_stat):
+            celija = tk.Frame(red_frame, bg=BG2)
+            celija.grid(row=0, column=i, padx=14, sticky="w")
+            tk.Label(celija, text=vred, bg=BG2, fg=ACCENT,
+                     font=("Consolas", 14, "bold")).pack(anchor="w")
+            tk.Label(celija, text=naziv, bg=BG2, fg=MUTED, font=FONT_SM).pack(anchor="w")
+
+        # — Srednji panel: graf broja po kategoriji —
+        graf = kartica(self, "Broj proizvoda po kategoriji")
+        graf.pack(fill="x", padx=20, pady=10)
+        self.fig = Figure(figsize=(7, 2.8), dpi=100, facecolor=BG2)
+        self.ax = self.fig.add_subplot(111)
+        self._nacrtaj_kategorije()
+        canvas = FigureCanvasTkAgg(self.fig, master=graf)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # — Donji panel: filter + tabela proizvoda —
+        donji = kartica(self, "Proizvodi")
+        donji.pack(fill="both", expand=True, padx=20, pady=(10, 20))
+
+        filter_frame = tk.Frame(donji, bg=BG2)
+        filter_frame.pack(fill="x", padx=8, pady=(8, 4))
+        tk.Label(filter_frame, text="Kategorija:", bg=BG2, fg=MUTED, font=FONT_SM).pack(side="left")
+        self.kat_var = tk.StringVar(value="(sve)")
+        kategorije = ["(sve)"] + sorted(df["kategorija"].dropna().unique().tolist())
+        self.kat_menu = ttk.Combobox(filter_frame, textvariable=self.kat_var,
+                                     values=kategorije, state="readonly", width=22)
+        self.kat_menu.pack(side="left", padx=8)
+        self.kat_menu.bind("<<ComboboxSelected>>", lambda e: self._popuni_tabelu())
+        self.lbl_broj = tk.Label(filter_frame, text="", bg=BG2, fg=AMBER, font=FONT_SM)
+        self.lbl_broj.pack(side="left", padx=12)
+
+        kolone = ("id", "naziv", "brend", "kategorija", "cena")
+        sirine  = (50, 360, 110, 130, 100)
+        self._num_kolone = {"id", "cena"}
+        self._sort_obrnuto: dict[str, bool] = {}
+        self.tabela = ttk.Treeview(donji, columns=kolone, show="headings", height=10)
+        for kol, sir in zip(kolone, sirine):
+            self.tabela.heading(kol, text=kol, command=lambda k=kol: self._sortiraj(k))
+            self.tabela.column(kol, width=sir, anchor="w")
+        self.tabela.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+
+        self._popuni_tabelu()
+
+    def _nacrtaj_kategorije(self):
+        brojevi = self.df["kategorija"].value_counts()
+        dark_osu(self.ax)
+        boje = [KLASTER_BOJE[i % len(KLASTER_BOJE)] for i in range(len(brojevi))]
+        self.ax.bar(range(len(brojevi)), brojevi.values, color=boje)
+        self.ax.set_xticks(range(len(brojevi)))
+        self.ax.set_xticklabels(brojevi.index, rotation=45, ha="right", fontsize=6)
+        self.ax.set_ylabel("broj")
+        self.fig.tight_layout()
+
+    def _popuni_tabelu(self):
+        kat = self.kat_var.get()
+        podaci = self.df if kat == "(sve)" else self.df[self.df["kategorija"] == kat]
+        podaci = podaci.sort_values("cena", ascending=False)
+        for r in self.tabela.get_children():
+            self.tabela.delete(r)
+        for _, red in podaci.head(500).iterrows():
+            self.tabela.insert("", tk.END, values=(
+                int(red["id"]), str(red["naziv"])[:50], red["brend"],
+                red["kategorija"], f"{red['cena']:,.0f} RSD"
+            ))
+        self.lbl_broj.config(text=f"{len(podaci):,} zapisa" +
+                             ("  (prikazano prvih 500)" if len(podaci) > 500 else ""))
+
+    def _sortiraj(self, kol: str):
+        obrnuto = self._sort_obrnuto.get(kol, False)
+        redovi = [(self.tabela.set(r, kol), r) for r in self.tabela.get_children()]
+        if kol in self._num_kolone:
+            def kljuc(par):
+                c = par[0].replace(",", "").replace("RSD", "").strip()
+                try:
+                    return float(c)
+                except ValueError:
+                    return float("-inf")
+        else:
+            def kljuc(par):
+                return par[0].lower()
+        redovi.sort(key=kljuc, reverse=obrnuto)
+        for i, (_, r) in enumerate(redovi):
+            self.tabela.move(r, "", i)
+        for k in self.tabela["columns"]:
+            self.tabela.heading(k, text=k)
+        self.tabela.heading(kol, text=kol + (" ▼" if obrnuto else " ▲"))
+        self._sort_obrnuto[kol] = not obrnuto
 
 
 # ── Tab 1: Regresija ──────────────────────────────────────────────────────────
