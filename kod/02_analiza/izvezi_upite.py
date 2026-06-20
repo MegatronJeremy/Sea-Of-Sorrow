@@ -39,7 +39,8 @@ def ucitaj_upite(putanja: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    upiti = ucitaj_upite("upiti.sql")
+    _DIR = Path(__file__).resolve().parent
+    upiti = ucitaj_upite(_DIR / "upiti.sql")
     conn = get_connection()
     rezultati = {}
     for naziv, upit in zip(NAZIVI_UPITA, upiti):
