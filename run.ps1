@@ -5,7 +5,8 @@
 param(
     [Parameter(Position=0)]
     [string]$Komanda = "",
-    [string]$Kat = ""
+    [string]$Kat = "",
+    [int]$Workers = 4
 )
 
 $VENV = ".venv\Scripts\python.exe"
@@ -56,11 +57,11 @@ function Run-Komanda {
         { $_ -in "3","crawl" } {
             Check-Venv
             if ($Kat) {
-                Write-Host "Crawl kategorije: $Kat" -ForegroundColor Cyan
-                & $VENV kod\01_crawler\crawler.py --run --kat $Kat
+                Write-Host "Crawl kategorije: $Kat ($Workers workera)" -ForegroundColor Cyan
+                & $VENV kod\01_crawler\crawler.py --run --kat $Kat --workers $Workers
             } else {
-                Write-Host "Pun crawl svih kategorija (moze trajati dugo)..." -ForegroundColor Cyan
-                & $VENV kod\01_crawler\crawler.py --run
+                Write-Host "Pun crawl svih kategorija ($Workers workera, moze trajati dugo)..." -ForegroundColor Cyan
+                & $VENV kod\01_crawler\crawler.py --run --workers $Workers
             }
         }
         { $_ -in "4","analiza" } {
