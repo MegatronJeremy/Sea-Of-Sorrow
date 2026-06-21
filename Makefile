@@ -64,6 +64,10 @@ app:
 test:
 	python -m pytest
 
+## Differential audit GUI logike (varirani ulazi, treba baza)
+audit:
+	python alati/audit_gui.py
+
 ## Provera okruženja i parsera (bez baze)
 debug:
 	python kod/debug.py

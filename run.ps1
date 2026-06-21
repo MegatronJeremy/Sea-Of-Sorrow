@@ -99,6 +99,11 @@ function Run-Komanda {
             Write-Host "Izvoz baza u baza\*_dump.sql..." -ForegroundColor Cyan
             & $VENV kod\db_dump.py
         }
+        { $_ -in "audit" } {
+            Check-Venv
+            Write-Host "Differential audit GUI logike (varirani ulazi -> izlaz)..." -ForegroundColor Cyan
+            & $VENV alati\audit_gui.py
+        }
         { $_ -in "0","izlaz","exit","q" } {
             Write-Host "Dovidjenja!" -ForegroundColor DarkGray
             exit 0
