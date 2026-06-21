@@ -38,8 +38,8 @@ function Show-Menu {
     Write-Host "  [7] test       - automatski testovi" -ForegroundColor White
     Write-Host "  [8] debug      - provera okruzenja" -ForegroundColor White
     Write-Host "  [9] debug-db   - provera okruzenja + baze" -ForegroundColor White
-    Write-Host " [10] db-dump   - izvoz baza u baza\*_dump.sql (za predaju)" -ForegroundColor White
-    Write-Host " [11] audit     - differential audit GUI logike" -ForegroundColor White
+    Write-Host " [10] db-dump    - izvoz baza u baza\*_dump.sql (za predaju)" -ForegroundColor White
+    Write-Host " [11] audit      - differential audit GUI logike" -ForegroundColor White
     Write-Host "  [0] izlaz" -ForegroundColor DarkGray
     Write-Host ""
     $izbor = Read-Host "Izbor"
