@@ -14,6 +14,10 @@ install:
 db-init:
 	python kod/db_init.py
 
+## Izvoz baza u SQL dump-ove (baza/*_dump.sql) — za predaju
+db-dump:
+	python kod/db_dump.py
+
 # ── Zadatak 1: Crawler ────────────────────────────────────────────────────────
 
 ## Proveri koje kategorije postoje na sajtu (bez upisa)

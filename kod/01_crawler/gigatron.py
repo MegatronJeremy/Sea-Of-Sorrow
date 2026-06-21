@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import re
 import sys
+import time
 from pathlib import Path
 
 from curl_cffi import requests
@@ -144,7 +146,11 @@ def mapiraj(raw: dict, naziv_kat: str) -> dict | None:
     }
 
 
+PAUZA = (0.3, 0.8)  # throttling između zahteva (poštovanje servera, izbegavanje DoS-a)
+
+
 def _strana(slug: str, page: int) -> list[dict]:
+    time.sleep(random.uniform(*PAUZA))
     url = f"{BASE}/{slug}?page={page}"
     r = _SESSION.get(url, timeout=25)
     if r.status_code != 200:

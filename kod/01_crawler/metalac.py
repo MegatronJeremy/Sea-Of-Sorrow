@@ -9,7 +9,9 @@ Zajednički interfejs za orchestrator: run(upsert_fn, log, stop_event).
 """
 from __future__ import annotations
 
+import random
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
@@ -25,6 +27,7 @@ IZVOR = "metalac.rs"
 WORKERS = 10
 STRANA_TIMEOUT = 180
 MAX_STRANA = 100
+PAUZA = (0.2, 0.6)  # throttling po zahtevu proizvoda (izbegavanje DoS-a)
 
 # slug -> naziv kategorije (usklađeno sa ostalim izvorima)
 KATEGORIJE = {
@@ -100,6 +103,7 @@ def _kartice(html: str) -> list[tuple[str, str, float | None]]:
 
 
 def _proizvod(url: str, naziv: str, cena: float | None, naziv_kat: str) -> dict | None:
+    time.sleep(random.uniform(*PAUZA))
     try:
         r = _SESSION.get(url, timeout=25)
     except Exception:

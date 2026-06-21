@@ -15,13 +15,20 @@ proizvodima bele tehnike sa srpskih onlajn prodavnica.
 
 | # | Zadatak | Poeni | Status |
 |---|---------|:-----:|:------:|
-| 1 | Prikupljanje podataka (veb indekser + parser) | 10 | ✅ radi (curl_cffi zaobilazi Cloudflare, paralelni crawl) |
-| 2 | Analiza i preprocesiranje (clean baza) | 10 | ✅ radi (IQR uklanjanje outliera, izvoz upita u Excel) |
+| 1 | Prikupljanje podataka (veb indekser + parser) | 10 | ✅ 8.065 zapisa, 3 izvora, paralelni scrape |
+| 2 | Analiza i preprocesiranje (clean baza ≥7000) | 10 | ✅ 7.356 prečišćenih, IQR outlieri, Excel izvoz |
 | 3 | Vizuelizacija (matplotlib, PNG grafici) | 5 | ✅ radi |
-| 4 | Linearna regresija od nule (gradijentni spust) | 12 | ✅ radi (R² ≈ 0.59 na realnim podacima) |
-| 5 | K-means klasterovanje od nule | 11 | ✅ radi (silhouette ≈ 0.37) |
+| 4 | Linearna regresija od nule (gradijentni spust) | 12 | ✅ R² ≈ 0.55 na realnim podacima |
+| 5 | K-means klasterovanje od nule | 11 | ✅ silhouette ≈ 0.48 |
 | 6 | Content-based recommender od nule | 12 | ✅ radi |
 | | **Ukupno** | **60** | |
+
+**Izvori podataka (paralelni scrape):**
+| Sajt | Tehnologija | Zapisa |
+|---|---|---|
+| gigatron.rs | Next.js RSC payload | ~4.400 |
+| tehnomanija.rs | statički Magento HTML | ~2.750 |
+| metalac.rs | statički HTML + spec strane | ~940 |
 
 > Zadaci 4, 5 i 6 implementiraju algoritme **ručno** (bez gotovih ML
 > biblioteka za trening); `scikit-learn` se koristi isključivo za
@@ -46,18 +53,25 @@ korisnika. Setup skripta sama kreira bazu i tabele — nije potreban `createdb`.
 .\run.ps1
 
 #    ili direktno:
-.\run.ps1 discover     # proveri kategorije na sajtu (bez upisa)
-.\run.ps1 crawl        # pun crawl svih kategorija u bazu
+.\run.ps1 crawl        # paralelni scrape sa sva 3 izvora u bazu
 .\run.ps1 analiza      # ciscenje + izvoz SQL upita u Excel
 .\run.ps1 viz          # generisi grafike (PNG)
 .\run.ps1 app          # GUI aplikacija (zadaci 4, 5, 6)
 .\run.ps1 test         # automatski testovi
+.\run.ps1 db-dump      # izvoz baza u baza\*_dump.sql (za predaju)
 .\run.ps1 debug        # provera okruzenja
 ```
 
-Crawl podržava i opcije: `.\run.ps1 crawl -Kat frizider -Workers 6`
+Crawl bira izvore: `.\run.ps1 crawl -Izvori gigatron,metalac` (default: sva tri).
 
-> Na Linux/Mac postoji i `Makefile` sa istim ciljevima (`make setup`, `make crawl`, ...).
+**Prikupljanje (Zadatak 1)** radi preko orchestratora `kod/01_crawler/scrape.py`
+koji svaki izvor pokreće u **zasebnom thread-u (paralelno)** — pošto su to
+različiti serveri, ne povećava opterećenje ni jednom (nema dodatnog rizika od
+bana), a ukupno vreme ≈ najsporiji sajt. **Watchdog** automatski prekida izvor
+bez napretka 240s, pa scrape ne može da visi. Dodavanje novog sajta = novi
+modul (`run(upsert_fn, log, stop_event)`) + jedan red u `IZVORI`.
+
+> Na Linux/Mac postoji i `Makefile` sa istim ciljevima (`make setup`, `make crawl`, `make db-dump`, ...).
 
 ---
 

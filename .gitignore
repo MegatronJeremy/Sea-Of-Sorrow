@@ -12,3 +12,5 @@ podaci/*.db
 # scratch logovi sa scrape-a
 *_log.txt
 crawl_log.txt
+# veliki SQL dump-ovi (regenerisu se: make db-dump) — idu u ZIP za predaju
+baza/*_dump.sql

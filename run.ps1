@@ -94,6 +94,11 @@ function Run-Komanda {
             Check-Venv
             & $VENV kod\debug.py --db --verbose
         }
+        { $_ -in "db-dump","dump" } {
+            Check-Venv
+            Write-Host "Izvoz baza u baza\*_dump.sql..." -ForegroundColor Cyan
+            & $VENV kod\db_dump.py
+        }
         { $_ -in "0","izlaz","exit","q" } {
             Write-Host "Dovidjenja!" -ForegroundColor DarkGray
             exit 0
