@@ -14,10 +14,11 @@ from config import BASE_URL, KATEGORIJE, MAX_STRANICA_PO_KATEGORIJI
 from fetcher import Fetcher
 from parser import apsolutni_url, parsiraj_listing, parsiraj_proizvod
 
-WORKERS = 6  # max koji tehnomanija tolerise bez 403
+WORKERS = 6           # max koji tehnomanija tolerise bez 403
+STRANA_TIMEOUT = 180  # ako jedna strana ne zavrsi za 180s (npr. Cloudflare blok), preskoci
 
 
-def run(upsert_fn, log=print, workers: int = WORKERS) -> int:
+def run(upsert_fn, log=print, workers: int = WORKERS, stop_event=None) -> int:
     fetcher = Fetcher()
     ukupno = 0
 
@@ -30,9 +31,14 @@ def run(upsert_fn, log=print, workers: int = WORKERS) -> int:
         return parsiraj_proizvod(resp.text, url, naziv)
 
     for slug, naziv in KATEGORIJE.items():
+        if stop_event and stop_event.is_set():
+            break
         url = f"{BASE_URL}/{slug}"
         stranica = 1
         while url and stranica <= MAX_STRANICA_PO_KATEGORIJI:
+            if stop_event and stop_event.is_set():
+                log("prekinuto (watchdog)")
+                return ukupno
             resp = fetcher.get(url)
             if resp is None:
                 break
@@ -42,12 +48,18 @@ def run(upsert_fn, log=print, workers: int = WORKERS) -> int:
             ok = 0
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futs = [pool.submit(_preuzmi, h, naziv) for h in linkovi]
-                for fut in as_completed(futs):
-                    p = fut.result()
-                    if p:
-                        upsert_fn(p)
-                        ok += 1
-                        ukupno += 1
+                try:
+                    for fut in as_completed(futs, timeout=STRANA_TIMEOUT):
+                        p = fut.result()
+                        if p:
+                            upsert_fn(p)
+                            ok += 1
+                            ukupno += 1
+                except TimeoutError:
+                    for f in futs:
+                        f.cancel()
+                    log(f"{naziv} str.{stranica}: TIMEOUT ({STRANA_TIMEOUT}s) — preskačem kategoriju")
+                    break
             log(f"{naziv} str.{stranica}: {ok}/{len(linkovi)} upisano (ukupno: {ukupno})")
             url = apsolutni_url(sledeca) if sledeca else None
             stranica += 1

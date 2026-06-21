@@ -159,15 +159,20 @@ def discover():
         print(f"  [{'OK' if prod else 'PRAZNO'}]  {naziv:<20} {len(prod)} na 1. strani  /{slug}")
 
 
-def run(upsert_fn=None, log=print) -> int:
+def run(upsert_fn=None, log=print, stop_event=None) -> int:
     """Scrape svih kategorija + upis. Zajednički interfejs za orchestrator:
-    upsert_fn(proizvod) i log(poruka). Vraća broj upisanih."""
+    upsert_fn(proizvod), log(poruka), stop_event (watchdog prekid). Vraća broj upisanih."""
     if upsert_fn is None:
         upsert_fn = upsert_proizvod
     ukupno = 0
     for slug, naziv in KATEGORIJE.items():
+        if stop_event and stop_event.is_set():
+            break
         page = 1
         while page <= MAX_STRANA:
+            if stop_event and stop_event.is_set():
+                log("prekinuto (watchdog)")
+                return ukupno
             proizvodi = _strana(slug, page)
             if not proizvodi:
                 break
