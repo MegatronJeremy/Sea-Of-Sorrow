@@ -73,6 +73,11 @@ def ocisti(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=OBAVEZNE_KOLONE)
     df = df[df["cena"] > 0]
 
+    # Normalizuj brend: različiti izvori koriste različita velika/mala slova
+    # (npr. "Vox" vs "VOX", "Gorenje" vs "GORENJE") — spaja ih u jedan brend.
+    df = df.copy()
+    df["brend"] = df["brend"].astype(str).str.strip().str.upper()
+
     popunjeno = df[DODATNE_KOLONE].notna().sum(axis=1)
     df = df[popunjeno >= MIN_DODATNIH_ATRIBUTA]
 

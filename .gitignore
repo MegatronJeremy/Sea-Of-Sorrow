@@ -14,3 +14,6 @@ podaci/*.db
 crawl_log.txt
 # veliki SQL dump-ovi (regenerisu se: make db-dump) — idu u ZIP za predaju
 baza/*_dump.sql
+
+# docx build (node_modules)
+.docbuild/
