@@ -108,16 +108,36 @@ def _prosecna_udaljenost(X, i, labele, klaster, iskljuci_sebe: bool) -> float:
     return float(np.mean(udaljenosti))
 
 
+def _opis_promenljive(kol: str, v: float) -> str | None:
+    """Tekstualni opis prosečne vrednosti jedne promenljive u klasteru."""
+    import math
+    if v is None or (isinstance(v, float) and math.isnan(v)):
+        return None
+    if kol == "cena":
+        return f"prosečna cena ≈ {v:,.0f} RSD"
+    if kol == "energetska_klasa_num":
+        return f"{'bolje' if v >= 6 else 'lošije'} energ. klase ({v:.1f}/10)"
+    if kol == "zapremina_l":
+        return f"prosečna zapremina ≈ {v:.0f} l"
+    if kol == "kapacitet_kg":
+        return f"prosečan kapacitet ≈ {v:.1f} kg"
+    if kol == "dijagonala_inch":
+        return f"prosečna dijagonala ≈ {v:.0f}\""
+    if kol == "snaga_w":
+        return f"prosečna snaga ≈ {v:.0f} W"
+    return f"{kol} ≈ {v:.1f}"
+
+
 def interpretiraj_klaster(df_klaster, kolone: list[str]) -> str:
-    """Generiše kratku tekstualnu interpretaciju klastera na osnovu proseka
-    cene i tehničkih karakteristika (npr. 'jeftiniji proizvodi lošijih
-    energetskih klasa')."""
-    prosecna_cena = df_klaster["cena"].mean()
-    delovi = [f"prosečna cena ≈ {prosecna_cena:,.0f} RSD"]
-
-    if "energetska_klasa_num" in df_klaster.columns:
-        prosecna_klasa = df_klaster["energetska_klasa_num"].mean()
-        opis = "boljih" if prosecna_klasa >= 6 else "lošijih"
-        delovi.append(f"{opis} energetskih klasa (prosek {prosecna_klasa:.1f}/10)")
-
+    """Generiše tekstualnu interpretaciju klastera na osnovu IZABRANIH promenljivih
+    (npr. za cena+zapremina opisuje cenu i zapreminu, ne energetsku klasu).
+    Cena se uvek prikazuje kao glavni pokazatelj ako postoji u podacima."""
+    redosled = (["cena"] if "cena" in df_klaster.columns else []) + \
+               [k for k in kolone if k != "cena"]
+    delovi = []
+    for kol in redosled:
+        if kol in df_klaster.columns:
+            opis = _opis_promenljive(kol, df_klaster[kol].mean())
+            if opis:
+                delovi.append(opis)
     return ", ".join(delovi)
