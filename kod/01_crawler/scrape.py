@@ -51,12 +51,15 @@ def _log_za(tag: str):
     return log
 
 
-def _watchdog(aktivni: dict[str, object], kraj: threading.Event):
-    """Prekida izvor koji nema napretka duže od STALL_TIMEOUT."""
+_zavrseni: set[str] = set()   # izvori koji su uredno završili (watchdog ih ignoriše)
+
+
+def _watchdog(izabrani: list[str], kraj: threading.Event):
+    """Prekida izvor koji nema napretka duže od STALL_TIMEOUT (osim ako je već završio)."""
     while not kraj.wait(WATCHDOG_TICK):
         sada = time.time()
-        for n in list(aktivni):
-            if _stop[n].is_set():
+        for n in izabrani:
+            if n in _zavrseni or _stop[n].is_set():
                 continue
             zastoj = sada - _poslednji.get(n, sada)
             if zastoj > STALL_TIMEOUT:
@@ -74,8 +77,7 @@ def pokreni(izabrani: list[str]) -> None:
         _stop[n] = threading.Event()
 
     kraj = threading.Event()
-    aktivni = {n: True for n in izabrani}
-    wd = threading.Thread(target=_watchdog, args=(aktivni, kraj), daemon=True)
+    wd = threading.Thread(target=_watchdog, args=(izabrani, kraj), daemon=True)
     wd.start()
 
     with ThreadPoolExecutor(max_workers=len(izabrani)) as pool:
@@ -83,6 +85,7 @@ def pokreni(izabrani: list[str]) -> None:
                 for n in izabrani}
         for fut in as_completed(futs):
             n = futs[fut]
+            _zavrseni.add(n)   # uredno završio — watchdog ga više ne dira
             try:
                 rezultati[n] = fut.result()
             except Exception as e:
@@ -91,7 +94,7 @@ def pokreni(izabrani: list[str]) -> None:
 
     print("\n=== Rezime ===")
     for n, r in rezultati.items():
-        oznaka = "  (prekinut watchdog-om)" if _stop[n].is_set() else ""
+        oznaka = "  (prekinut watchdog-om)" if (_stop[n].is_set() and n not in _zavrseni) else ""
         print(f"  {n:<12} {r}{oznaka}")
     print(f"\nUkupno u primarnoj bazi: {broj_zapisa()}")
     print(f"Vreme: {time.time() - t0:.0f}s")
