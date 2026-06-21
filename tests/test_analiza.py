@@ -66,14 +66,15 @@ class TestOcisti:
         ociscen = ocisti(df.copy())
         assert len(ociscen) == 9
 
-    def test_filtrira_zapis_bez_tehnickih_atributa(self):
+    def test_zadrzava_zapis_bez_tehnickih_atributa(self):
+        # Postavka: nedostupna tehnička polja ostaju NULL i NE brišu zapis
+        # (validan je ako ima naziv/brend/kategorija/cena).
         df = self._pravi_df(10)
-        # obriši sve tehničke atribute za prvi zapis
         for kol in DODATNE_KOLONE:
             if kol in df.columns:
                 df.loc[0, kol] = None
         ociscen = ocisti(df.copy())
-        assert len(ociscen) == 9
+        assert len(ociscen) == 10
 
     def test_uklanja_duplikate_po_url(self):
         df = self._pravi_df(10)
@@ -131,8 +132,9 @@ class TestObavezneFunkcije:
         assert "kategorija" in OBAVEZNE_KOLONE
         assert "cena" in OBAVEZNE_KOLONE
 
-    def test_min_dodatnih_atributa_pozitivan(self):
-        assert MIN_DODATNIH_ATRIBUTA >= 1
+    def test_min_dodatnih_atributa_nenegativan(self):
+        # 0 = tehnička polja nisu obavezna (nedostupna ostaju NULL, per postavci)
+        assert MIN_DODATNIH_ATRIBUTA >= 0
 
     def test_dodatne_kolone_sadrze_tehnicke(self):
         tehnicke = {"energetska_klasa", "dijagonala_inch", "kapacitet_kg",

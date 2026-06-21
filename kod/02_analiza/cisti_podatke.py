@@ -25,7 +25,12 @@ from zajednicko.util import energetska_klasa_u_broj  # noqa: E402
 
 OBAVEZNE_KOLONE = ["naziv", "brend", "kategorija", "cena"]
 
-MIN_DODATNIH_ATRIBUTA = 1
+# Tehnička polja koja NE moraju biti popunjena: postavka kaže da nedostupni
+# podaci ostaju NULL, pa ih ne tretiramo kao razlog za odbacivanje zapisa.
+# (Mali aparati — toster, blender — često nemaju standardizovane spec atribute.)
+# MIN_DODATNIH_ATRIBUTA = 0 znači: zapis je validan ako ima 4 osnovna polja
+# (naziv, brend, kategorija, cena); tehnička polja se popunjavaju gde postoje.
+MIN_DODATNIH_ATRIBUTA = 0
 DODATNE_KOLONE = ["energetska_klasa", "dijagonala_inch", "kapacitet_kg", "zapremina_l", "snaga_w"]
 
 # Donji prag cene: ispod ovoga su uglavnom dodaci/potrosni materijal (ulosci,
