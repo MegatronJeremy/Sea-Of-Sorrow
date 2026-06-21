@@ -21,6 +21,16 @@ ZIP_PUTANJA="/tmp/${NAZIV}.zip"
 
 cd "$(dirname "$0")/.."  # koren projekta
 
+# Generiši SQL dump-ove baze (primarna + revidirana) pre pakovanja, da /baza
+# sadrži PODATKE, ne samo šeme. Koristi venv python ako postoji.
+PY=".venv/Scripts/python.exe"
+[ -x "$PY" ] || PY=".venv/bin/python"
+[ -x "$PY" ] || PY="python"
+echo "Generišem SQL dump-ove baze..."
+"$PY" kod/db_dump.py || {
+    echo "UPOZORENJE: db_dump nije uspeo (PostgreSQL pokrenut?). /baza će imati samo šeme."
+}
+
 rm -rf "$IZLAZ_DIR" "$ZIP_PUTANJA"
 mkdir -p "$IZLAZ_DIR"
 
@@ -28,8 +38,9 @@ cp -r kod "$IZLAZ_DIR/kod"
 cp -r baza "$IZLAZ_DIR/baza"
 cp -r izvestaj "$IZLAZ_DIR/izveštaj"
 
-# izbaci .env, __pycache__ i sirove podatke iz arhive
+# izbaci .env, __pycache__, scratch logove i node_modules iz arhive
 find "$IZLAZ_DIR" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+find "$IZLAZ_DIR" -name "*.pyc" -delete 2>/dev/null || true
 rm -f "$IZLAZ_DIR/kod"/**/.env
 
 cd /tmp
