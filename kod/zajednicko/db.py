@@ -9,12 +9,17 @@ Koristi se iz svih podfoldera (crawler, analiza, aplikacija) preko:
 from __future__ import annotations
 
 import os
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
+
+# pandas.read_sql_query sa psycopg2 konekcijom radi ispravno, ali pandas zvanično
+# preporučuje SQLAlchemy i baca UserWarning — suzbijamo ga (benigno za naš slučaj).
+warnings.filterwarnings("ignore", message=".*pandas only supports SQLAlchemy.*")
 
 _ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(_ROOT / ".env")
