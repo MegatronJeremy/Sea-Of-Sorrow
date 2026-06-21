@@ -25,14 +25,16 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))        # zajednicko
 
 import gigatron  # noqa: E402
 import tehnomanija  # noqa: E402
+import metalac  # noqa: E402
 from db import broj_zapisa, upsert_proizvod  # noqa: E402
 
 # naziv -> run funkcija (run(upsert_fn, log, stop_event) -> int)
 IZVORI = {
     "gigatron": gigatron.run,
     "tehnomanija": tehnomanija.run,
+    "metalac": metalac.run,
 }
-DEFAULT = ["gigatron", "tehnomanija"]
+DEFAULT = ["gigatron", "tehnomanija", "metalac"]
 
 # Ako izvor ne zabeleži napredak (ne pozove log) duže od ovoga — watchdog ga prekida.
 STALL_TIMEOUT = 240   # sekundi bez napretka = zaglavljen
