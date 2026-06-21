@@ -159,10 +159,13 @@ def discover():
         print(f"  [{'OK' if prod else 'PRAZNO'}]  {naziv:<20} {len(prod)} na 1. strani  /{slug}")
 
 
-def run():
+def run(upsert_fn=None, log=print) -> int:
+    """Scrape svih kategorija + upis. Zajednički interfejs za orchestrator:
+    upsert_fn(proizvod) i log(poruka). Vraća broj upisanih."""
+    if upsert_fn is None:
+        upsert_fn = upsert_proizvod
     ukupno = 0
     for slug, naziv in KATEGORIJE.items():
-        print(f"\n=== Gigatron: {naziv} ({slug}) ===")
         page = 1
         while page <= MAX_STRANA:
             proizvodi = _strana(slug, page)
@@ -172,13 +175,13 @@ def run():
             for raw in proizvodi:
                 p = mapiraj(raw, naziv)
                 if p and p["cena"]:
-                    upsert_proizvod(p)
+                    upsert_fn(p)
                     ok += 1
                     ukupno += 1
-            print(f"  strana {page}: {ok}/{len(proizvodi)} upisano  (ukupno: {ukupno})")
+            log(f"{naziv} str.{page}: {ok}/{len(proizvodi)} upisano (ukupno: {ukupno})")
             page += 1
-    print(f"\nGotovo. Upisano/ažurirano {ukupno} sa Gigatrona.")
-    print(f"Ukupan broj zapisa u primarnoj bazi: {broj_zapisa()}")
+    log(f"GOTOVO — {ukupno} sa Gigatrona.")
+    return ukupno
 
 
 if __name__ == "__main__":
@@ -187,4 +190,9 @@ if __name__ == "__main__":
     g.add_argument("--discover", action="store_true")
     g.add_argument("--run", action="store_true")
     args = ap.parse_args()
-    discover() if args.discover else run()
+    if args.discover:
+        discover()
+    else:
+        run()
+        if broj_zapisa:
+            print(f"Ukupan broj zapisa u primarnoj bazi: {broj_zapisa()}")

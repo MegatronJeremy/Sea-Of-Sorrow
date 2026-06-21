@@ -6,7 +6,8 @@ param(
     [Parameter(Position=0)]
     [string]$Komanda = "",
     [string]$Kat = "",
-    [int]$Workers = 0
+    [int]$Workers = 0,
+    [string]$Izvori = ""
 )
 
 $VENV = ".venv\Scripts\python.exe"
@@ -57,12 +58,11 @@ function Run-Komanda {
         }
         { $_ -in "3","crawl" } {
             Check-Venv
-            $extraArgs = @()
-            if ($Kat)     { $extraArgs += "--kat", $Kat }
-            if ($Workers -gt 0) { $extraArgs += "--workers", $Workers }
-            $opis = if ($Kat) { "kategorije: $Kat" } else { "svih kategorija" }
-            Write-Host "Crawl $opis..." -ForegroundColor Cyan
-            & $VENV kod\01_crawler\crawler.py --run @extraArgs
+            # Paralelni scrape sa svih izvora (gigatron + tehnomanija po defaultu)
+            $da = @()
+            if ($Izvori) { $da += "--izvori", $Izvori }
+            Write-Host "Paralelni scrape sa svih izvora..." -ForegroundColor Cyan
+            & $VENV kod\01_crawler\scrape.py @da
         }
         { $_ -in "4","analiza" } {
             Check-Venv

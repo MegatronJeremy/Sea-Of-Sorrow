@@ -24,11 +24,15 @@ discover:
 test-crawl:
 	cd kod/01_crawler && python crawler.py --test --kat $(KAT)
 
-## Pun crawl svih kategorija sa upisom u bazu (traje dugo!)
+## Paralelni scrape sa svih izvora (gigatron + tehnomanija) u bazu
 crawl:
-	cd kod/01_crawler && python crawler.py --run
+	cd kod/01_crawler && python scrape.py
 
-## Crawl samo jedne kategorije: make crawl-kat KAT=frizider
+## Scrape samo izabranih izvora: make crawl-izvori IZVORI=gigatron
+crawl-izvori:
+	cd kod/01_crawler && python scrape.py --izvori $(IZVORI)
+
+## Crawl samo jedne tehnomanija kategorije: make crawl-kat KAT=frizider
 crawl-kat:
 	cd kod/01_crawler && python crawler.py --run --kat $(KAT)
 
