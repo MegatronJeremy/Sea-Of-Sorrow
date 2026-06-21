@@ -38,6 +38,8 @@ function Show-Menu {
     Write-Host "  [7] test       - automatski testovi" -ForegroundColor White
     Write-Host "  [8] debug      - provera okruzenja" -ForegroundColor White
     Write-Host "  [9] debug-db   - provera okruzenja + baze" -ForegroundColor White
+    Write-Host " [10] db-dump   - izvoz baza u baza\*_dump.sql (za predaju)" -ForegroundColor White
+    Write-Host " [11] audit     - differential audit GUI logike" -ForegroundColor White
     Write-Host "  [0] izlaz" -ForegroundColor DarkGray
     Write-Host ""
     $izbor = Read-Host "Izbor"
@@ -94,12 +96,12 @@ function Run-Komanda {
             Check-Venv
             & $VENV kod\debug.py --db --verbose
         }
-        { $_ -in "db-dump","dump" } {
+        { $_ -in "10","db-dump","dump" } {
             Check-Venv
             Write-Host "Izvoz baza u baza\*_dump.sql..." -ForegroundColor Cyan
             & $VENV kod\db_dump.py
         }
-        { $_ -in "audit" } {
+        { $_ -in "11","audit" } {
             Check-Venv
             Write-Host "Differential audit GUI logike (varirani ulazi -> izlaz)..." -ForegroundColor Cyan
             & $VENV alati\audit_gui.py
@@ -110,7 +112,7 @@ function Run-Komanda {
         }
         default {
             Write-Host "Nepoznata komanda: $Cmd" -ForegroundColor Red
-            Write-Host "Dostupne komande: setup, discover, crawl, analiza, viz, app, test, debug, debug-db" -ForegroundColor Yellow
+            Write-Host "Dostupne komande: setup, discover, crawl, analiza, viz, app, test, debug, debug-db, db-dump, audit" -ForegroundColor Yellow
             exit 1
         }
     }
