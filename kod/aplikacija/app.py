@@ -127,7 +127,12 @@ class Aplikacija(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("PSZ — Sea of Sorrow")
-        self.geometry("1000x700")
+        # Veći podrazumevani prozor, centriran na ekranu, sa minimalnom veličinom
+        _w, _h = 1280, 860
+        _x = max(0, (self.winfo_screenwidth() - _w) // 2)
+        _y = max(0, (self.winfo_screenheight() - _h) // 2 - 20)
+        self.geometry(f"{_w}x{_h}+{_x}+{_y}")
+        self.minsize(1040, 700)
         self.configure(bg=BG)
         self.resizable(True, True)
 
@@ -242,7 +247,7 @@ class TabPregledBaze(tk.Frame):
         # — Srednji panel: graf broja po kategoriji —
         graf = kartica(self, "Broj proizvoda po kategoriji")
         graf.pack(fill="x", padx=20, pady=10)
-        self.fig = Figure(figsize=(7, 4.2), dpi=100, facecolor=BG2)
+        self.fig = Figure(figsize=(7, 3.2), dpi=100, facecolor=BG2)
         self.ax = self.fig.add_subplot(111)
         self._nacrtaj_kategorije()
         canvas = FigureCanvasTkAgg(self.fig, master=graf)
@@ -277,8 +282,8 @@ class TabPregledBaze(tk.Frame):
         self._popuni_tabelu()
 
     def _nacrtaj_kategorije(self):
-        # horizontalni bar, top 18 kategorija — čitljivije od 34 uspravna stuba
-        brojevi = self.df["kategorija"].value_counts().head(18)[::-1]
+        # horizontalni bar, top 15 kategorija — čitljivo, a ostavlja prostor tabeli
+        brojevi = self.df["kategorija"].value_counts().head(15)[::-1]
         dark_osu(self.ax)
         boje = [KLASTER_BOJE[i % len(KLASTER_BOJE)] for i in range(len(brojevi))]
         y = range(len(brojevi))
