@@ -9,3 +9,6 @@ podaci/*.db
 *.xlsx
 !izvestaj/upiti_rezultati.xlsx
 .idea/
+# scratch logovi sa scrape-a
+*_log.txt
+crawl_log.txt
