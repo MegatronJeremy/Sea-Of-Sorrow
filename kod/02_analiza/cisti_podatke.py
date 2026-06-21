@@ -37,7 +37,27 @@ DODATNE_KOLONE = ["energetska_klasa", "dijagonala_inch", "kapacitet_kg", "zaprem
 # kablovi), ne kucni aparati — kvare raspodelu cena i regresiju.
 MIN_CENA = 1000.0
 
+# Fizicki moguci opseg tehnickih atributa — vrednosti van opsega su greske
+# parsiranja (npr. frizider od 2069 l, gde je verovatno "206.9 l"); postavljaju
+# se na NULL da ne kvare klasterovanje/regresiju (jedan outlier pravi svoj klaster).
+OPSEG_ATRIBUTA = {
+    "dijagonala_inch": (10, 120),
+    "kapacitet_kg": (1, 30),
+    "zapremina_l": (10, 1000),
+    "snaga_w": (1, 12000),
+}
+
 _BAZA_DIR = Path(__file__).resolve().parents[2] / "baza"
+
+
+def ogranici_atribute(df: pd.DataFrame) -> pd.DataFrame:
+    """Postavlja na NULL tehnicke vrednosti van fizicki mogucih granica."""
+    df = df.copy()
+    for kol, (lo, hi) in OPSEG_ATRIBUTA.items():
+        if kol in df.columns:
+            van = df[kol].notna() & ((df[kol] < lo) | (df[kol] > hi))
+            df.loc[van, kol] = None
+    return df
 
 
 def ukloni_cenovne_outliere(df: pd.DataFrame) -> pd.DataFrame:
@@ -77,6 +97,9 @@ def ocisti(df: pd.DataFrame) -> pd.DataFrame:
     # (npr. "Vox" vs "VOX", "Gorenje" vs "GORENJE") — spaja ih u jedan brend.
     df = df.copy()
     df["brend"] = df["brend"].astype(str).str.strip().str.upper()
+
+    # Postavi na NULL fizicki nemoguce tehnicke vrednosti (greske parsiranja)
+    df = ogranici_atribute(df)
 
     popunjeno = df[DODATNE_KOLONE].notna().sum(axis=1)
     df = df[popunjeno >= MIN_DODATNIH_ATRIBUTA]

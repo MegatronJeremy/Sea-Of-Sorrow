@@ -242,7 +242,7 @@ class TabPregledBaze(tk.Frame):
         # — Srednji panel: graf broja po kategoriji —
         graf = kartica(self, "Broj proizvoda po kategoriji")
         graf.pack(fill="x", padx=20, pady=10)
-        self.fig = Figure(figsize=(7, 2.8), dpi=100, facecolor=BG2)
+        self.fig = Figure(figsize=(7, 4.2), dpi=100, facecolor=BG2)
         self.ax = self.fig.add_subplot(111)
         self._nacrtaj_kategorije()
         canvas = FigureCanvasTkAgg(self.fig, master=graf)
@@ -277,13 +277,18 @@ class TabPregledBaze(tk.Frame):
         self._popuni_tabelu()
 
     def _nacrtaj_kategorije(self):
-        brojevi = self.df["kategorija"].value_counts()
+        # horizontalni bar, top 18 kategorija — čitljivije od 34 uspravna stuba
+        brojevi = self.df["kategorija"].value_counts().head(18)[::-1]
         dark_osu(self.ax)
         boje = [KLASTER_BOJE[i % len(KLASTER_BOJE)] for i in range(len(brojevi))]
-        self.ax.bar(range(len(brojevi)), brojevi.values, color=boje)
-        self.ax.set_xticks(range(len(brojevi)))
-        self.ax.set_xticklabels(brojevi.index, rotation=45, ha="right", fontsize=6)
-        self.ax.set_ylabel("broj")
+        y = range(len(brojevi))
+        self.ax.barh(y, brojevi.values, color=boje)
+        self.ax.set_yticks(list(y))
+        self.ax.set_yticklabels(brojevi.index, fontsize=7)
+        self.ax.set_xlabel("broj proizvoda")
+        # broj na kraju svakog bara
+        for i, v in enumerate(brojevi.values):
+            self.ax.text(v, i, f" {v}", va="center", fontsize=6, color=TEXT)
         self.fig.tight_layout()
 
     def _popuni_tabelu(self):
@@ -461,6 +466,9 @@ class TabRegresija(tk.Frame):
             messagebox.showwarning("Paznja", "Prvo obuci model.")
             return
         red = {k: v.get() for k, v in self.polja.items()}
+        # brend u bazi je normalizovan na velika slova (cisti_podatke) — uskladi unos
+        if red.get("brend"):
+            red["brend"] = red["brend"].strip().upper()
         df_red = pd.DataFrame([{**red, "cena": np.nan}])
         df_kom = pd.concat([self.df, df_red], ignore_index=True)
         for kol in ["dijagonala_inch", "kapacitet_kg", "zapremina_l", "snaga_w", "energetska_klasa_num"]:
