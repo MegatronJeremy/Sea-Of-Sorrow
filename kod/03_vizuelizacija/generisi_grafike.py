@@ -1,10 +1,14 @@
 """
-Zadatak 3: Vizuelizacija podataka iz revidirane baze.
+Vizuelizacija podataka iz revidirane baze — čuva grafike kao PNG u izvestaj/grafici/.
 
-Generiše 6 tipova grafikona i čuva ih kao PNG u izvestaj/grafici/:
+Zadatak 3 (obavezno):
   - bar + pie po kategoriji, brendu, cenovnom opsegu, energetskoj klasi
   - scatter: cena vs. zapremina (frižideri) i cena vs. dijagonala (televizori)
   - box plot: raspodela cena po kategoriji
+
+Zadaci 4 i 5 (grafici za izveštaj — "visoko preporučeno, donosi max poena"):
+  - regresija: kriva učenja troška (MSE po iteraciji) + predviđeno vs. stvarno
+  - klasterovanje: 2D scatter klastera sa centroidima (verno GUI-ju)
 
 Pokretanje:
     cd kod/03_vizuelizacija
@@ -14,11 +18,19 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+_KOD = Path(__file__).resolve().parents[1]
+sys.path.append(str(_KOD))
+sys.path.append(str(_KOD / "04_regresija"))
+sys.path.append(str(_KOD / "05_klasterovanje"))
 from zajednicko.db import get_connection  # noqa: E402
-from zajednicko.util import cenovni_opseg  # noqa: E402
+from zajednicko.util import cenovni_opseg, normalizuj  # noqa: E402
+from regresija import (  # noqa: E402
+    LinearnaRegresijaGD, pripremi_podatke, podeli_train_test, r2_skor, rmse,
+)
+from kmeans import KMeans  # noqa: E402
 
 IZLAZ_DIR = Path(__file__).resolve().parents[2] / "izvestaj" / "grafici"
 IZLAZ_DIR.mkdir(parents=True, exist_ok=True)
@@ -146,6 +158,95 @@ def graf_boxplot_cena_po_kategoriji(df: pd.DataFrame, min_zapisa: int = 10):
     plt.close(fig)
 
 
+# ── Zadatak 4: Regresija — kriva učenja + predviđeno vs. stvarno ──────────────
+
+def graf_regresija(df: pd.DataFrame):
+    """Kriva učenja troška (MSE po iteraciji) i predviđeno-vs-stvarno na test skupu.
+    Isti parametri kao GUI (stopa 0.05, 2000 iteracija, split 80/20)."""
+    X, y, _ = pripremi_podatke(df)
+    X_tr, X_te, y_tr, y_te = podeli_train_test(X, y)
+    model = LinearnaRegresijaGD(stopa_ucenja=0.05, broj_iteracija=2000).fit(X_tr, y_tr)
+    y_pred = model.predict(X_te)
+    r2, rm = r2_skor(y_te, y_pred), rmse(y_te, y_pred)
+
+    # (a) kriva učenja troška (log skala, kao u GUI-ju)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(model.istorija_troska, color="#4c72b0", linewidth=1.5)
+    ax.set_yscale("log")
+    ax.set_xlabel("iteracija")
+    ax.set_ylabel("trošak (MSE, log skala)")
+    ax.set_title("Regresija — kriva učenja (konvergencija troška)")
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "regresija_kriva_ucenja.png", dpi=150)
+    plt.close(fig)
+
+    # (b) predviđeno vs. stvarno (idealna linija y=x)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(y_te / 1000, y_pred / 1000, s=12, alpha=0.4,
+               color="#55a868", edgecolors="none")
+    lo = min(y_te.min(), y_pred.min()) / 1000
+    hi = max(y_te.max(), y_pred.max()) / 1000
+    ax.plot([lo, hi], [lo, hi], color="#dd8452", linewidth=1.2, linestyle="--")
+    ax.set_xlabel("stvarna cena (hilj. RSD)")
+    ax.set_ylabel("predviđena cena (hilj. RSD)")
+    ax.set_title(f"Regresija — predviđeno vs. stvarno (R² = {r2:.3f}, RMSE = {rm:,.0f} RSD)")
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "regresija_pred_vs_stvarno.png", dpi=150)
+    plt.close(fig)
+
+
+# ── Zadatak 5: K-means — 2D scatter klastera sa centroidima ───────────────────
+
+def graf_klasterovanje(df: pd.DataFrame,
+                       tezine: dict[str, float] | None = None, k: int = 4):
+    """2D scatter klastera (prve dve izabrane promenljive, izvorne jedinice)
+    obojen po klasteru + centroidi. Verno GUI-ju: normalizacija * težina, K-means."""
+    if tezine is None:  # podrazumevani primer iz GUI-ja
+        tezine = {"cena": 50, "zapremina_l": 30, "energetska_klasa_num": 20}
+    izabrane = list(tezine.keys())
+
+    pod = df.dropna(subset=izabrane).copy()
+    if len(pod) < k:
+        return
+
+    X = np.column_stack([
+        normalizuj(pod[kol]) * (tezine[kol] / 100) for kol in izabrane
+    ])
+    model = KMeans(k=k).fit(X)
+    pod["klaster"] = model.labele
+
+    xk, yk = izabrane[0], izabrane[1]
+    boje = ["#4c72b0", "#dd8452", "#55a868", "#c44e52",
+            "#8172b3", "#937860", "#da8bc3", "#8c8c8c"]
+
+    # cena se prikazuje u hiljadama RSD radi čitljivosti ose (bez obzira na kojoj je osi)
+    skala = lambda kol, vrednosti: vrednosti / 1000 if kol == "cena" else vrednosti
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for i in range(k):
+        grupa = pod[pod["klaster"] == i]
+        if grupa.empty:
+            continue
+        boja = boje[i % len(boje)]
+        ax.scatter(skala(xk, grupa[xk]), skala(yk, grupa[yk]),
+                   s=18, alpha=0.6, color=boja, edgecolors="none",
+                   label=f"klaster {i} [{len(grupa)}]")
+        ax.scatter(skala(xk, grupa[xk].mean()), skala(yk, grupa[yk].mean()),
+                   s=220, marker="X", color=boja, edgecolors="black", linewidths=1.2)
+
+    jedinice = {"cena": " (hilj. RSD)", "zapremina_l": " (l)",
+                "dijagonala_inch": ' (")', "kapacitet_kg": " (kg)",
+                "snaga_w": " (W)", "energetska_klasa_num": " (1-10)"}
+    ax.set_xlabel(xk + jedinice.get(xk, ""))
+    ax.set_ylabel(yk + jedinice.get(yk, ""))
+    opis = " + ".join(f"{k}={v}%" for k, v in tezine.items())
+    ax.set_title(f"K-means klasteri (K={k}) — {opis}")
+    ax.legend(fontsize=8)
+    plt.tight_layout()
+    fig.savefig(IZLAZ_DIR / "klasteri_scatter.png", dpi=150)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM proizvodi_revidirana;", conn)
@@ -158,5 +259,7 @@ if __name__ == "__main__":
     graf_scatter_cena_zapremina(df)
     graf_scatter_cena_dijagonala(df)
     graf_boxplot_cena_po_kategoriji(df)
+    graf_regresija(df)         # Zadatak 4
+    graf_klasterovanje(df)     # Zadatak 5
 
     print(f"Grafici sačuvani u {IZLAZ_DIR.resolve()}")
