@@ -24,8 +24,14 @@ IZLAZ_DIR = Path(__file__).resolve().parents[2] / "izvestaj" / "grafici"
 IZLAZ_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _bar_i_pie(serija: pd.Series, naslov: str, fajl_prefix: str):
-    """Pravi i bar-chart i pie-chart za istu seriju (broj + procentualni odnos)."""
+def _bar_i_pie(serija: pd.Series, naslov: str, fajl_prefix: str, max_krisaka: int = 10):
+    """Bar-chart + pie-chart za istu seriju (broj + procentualni odnos).
+
+    Pita: sitne kategorije preko `max_krisaka` grupišu se u 'ostalo', imena idu u
+    legendu (ne kao labele na kriškama), a procenat se ispisuje samo na kriškama
+    >= 3%. Tako se tekst ne preklapa kad ima puno / vrlo sitnih kategorija
+    (npr. energetska klasa ili cenovni opseg sa kriškama ispod 1%).
+    """
     fig, ax = plt.subplots(figsize=(8, 5))
     serija.plot(kind="bar", ax=ax, color="#4c72b0")
     ax.set_title(f"{naslov} — broj proizvoda")
@@ -35,11 +41,24 @@ def _bar_i_pie(serija: pd.Series, naslov: str, fajl_prefix: str):
     fig.savefig(IZLAZ_DIR / f"{fajl_prefix}_broj.png", dpi=150)
     plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.pie(serija.values, labels=serija.index, autopct="%1.1f%%", startangle=90)
+    pita = serija.copy()
+    if len(pita) > max_krisaka:
+        glavne = pita.iloc[:max_krisaka]
+        ostalo = float(pita.iloc[max_krisaka:].sum())
+        pita = pd.concat([glavne, pd.Series({"ostalo": ostalo})])
+    udeli = pita / pita.sum() * 100.0
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    wedges, _t, _a = ax.pie(
+        pita.values, startangle=90, pctdistance=0.72,
+        autopct=lambda p: f"{p:.1f}%" if p >= 3 else "",
+        textprops=dict(fontsize=9),
+    )
+    ax.legend(wedges, [f"{ime}  {p:.1f}%" for ime, p in udeli.items()],
+              loc="center left", bbox_to_anchor=(1.02, 0.5), fontsize=9, frameon=False)
     ax.set_title(f"{naslov} — procentualni odnos")
-    plt.tight_layout()
-    fig.savefig(IZLAZ_DIR / f"{fajl_prefix}_procenat.png", dpi=150)
+    ax.axis("equal")
+    fig.savefig(IZLAZ_DIR / f"{fajl_prefix}_procenat.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -104,7 +123,9 @@ def graf_scatter_cena_dijagonala(df: pd.DataFrame):
 
 
 def graf_boxplot_cena_po_kategoriji(df: pd.DataFrame, min_zapisa: int = 10):
-    """Box plot raspodele cena po kategorijama (samo kategorije sa >= min_zapisa)."""
+    """Horizontalni box plot raspodele cena po kategorijama (>= min_zapisa zapisa),
+    sortirano po medijani. Horizontalno + visina srazmerna broju kategorija da bi
+    labele bile čitljive -- vertikalna varijanta je bila preširoka i zgnječena."""
     grupe = {
         kat: pod["cena"].dropna().values / 1000
         for kat, pod in df.groupby("kategorija")
@@ -112,12 +133,14 @@ def graf_boxplot_cena_po_kategoriji(df: pd.DataFrame, min_zapisa: int = 10):
     }
     if not grupe:
         return
+    # sortiraj po medijani (rastuce) radi citljivosti
+    grupe = dict(sorted(grupe.items(), key=lambda kv: float(pd.Series(kv[1]).median())))
 
-    fig, ax = plt.subplots(figsize=(max(6, len(grupe) * 1.2), 5))
-    ax.boxplot(list(grupe.values()), tick_labels=list(grupe.keys()), patch_artist=True)
-    ax.set_ylabel("Cena (hilj. RSD)")
+    fig, ax = plt.subplots(figsize=(9, max(5, len(grupe) * 0.34)))
+    ax.boxplot(list(grupe.values()), tick_labels=list(grupe.keys()),
+               patch_artist=True, orientation="horizontal")
+    ax.set_xlabel("Cena (hilj. RSD)")
     ax.set_title("Raspodela cena po kategoriji")
-    plt.xticks(rotation=30, ha="right")
     plt.tight_layout()
     fig.savefig(IZLAZ_DIR / "boxplot_cena_kategorija.png", dpi=150)
     plt.close(fig)
