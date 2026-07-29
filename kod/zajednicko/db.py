@@ -24,11 +24,18 @@ warnings.filterwarnings("ignore", message=".*pandas only supports SQLAlchemy.*")
 _ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(_ROOT / ".env")
 
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "psz_primarna")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+def _clean(v: str) -> str:
+    # PostgreSQL/psycopg2 odbijaju NUL bajt ("embedded null character"). Moze da
+    # udje iz lose enkodiranog .env-a ili iz prosirenog tastera (strelica/F-taster)
+    # koji getpass na Windows-u procita kao \x00 + scancode. Izbaci ga.
+    return v.replace("\x00", "")
+
+
+DB_HOST = _clean(os.getenv("DB_HOST", "localhost"))
+DB_PORT = _clean(os.getenv("DB_PORT", "5432"))
+DB_NAME = _clean(os.getenv("DB_NAME", "psz_primarna"))
+DB_USER = _clean(os.getenv("DB_USER", "postgres"))
+DB_PASSWORD = _clean(os.getenv("DB_PASSWORD", ""))
 
 
 def get_connection(dbname: str | None = None):
@@ -51,9 +58,9 @@ def je_auth_greska(e: Exception) -> bool:
 def postavi_lozinku(pwd: str, sacuvaj: bool = True) -> None:
     """Postavlja lozinku za naredne konekcije (runtime) i opciono je upisuje u .env."""
     global DB_PASSWORD
-    DB_PASSWORD = pwd
+    DB_PASSWORD = _clean(pwd)   # nikad ne dozvoli NUL (npr. strelica u getpass) da udje u .env
     if sacuvaj:
-        _upisi_u_env("DB_PASSWORD", pwd)
+        _upisi_u_env("DB_PASSWORD", DB_PASSWORD)
 
 
 def _upisi_u_env(kljuc: str, vrednost: str) -> None:
