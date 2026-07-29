@@ -6,6 +6,7 @@ Ne zahteva `pg_dump` u PATH-u — koristi psycopg2 direktno.
 
 Pokretanje:  python kod/db_dump.py
 """
+import json
 import sys
 from pathlib import Path
 
@@ -28,7 +29,12 @@ def _sql_vrednost(v) -> str:
         return "TRUE" if v else "FALSE"
     if isinstance(v, (int, float)):
         return str(v)
-    # tekst / json / datum -> escapuj apostrofe
+    if isinstance(v, (dict, list)):
+        # JSON/JSONB kolona: psycopg2 vraca Python dict/list. Mora VALIDAN JSON
+        # (dvostruki navodnici) -- Python repr sa jednostrukim PostgreSQL odbija
+        # ("invalid input syntax for type json"). Zato json.dumps.
+        v = json.dumps(v, ensure_ascii=False)
+    # tekst / json-kao-string / datum -> escapuj apostrofe
     return "'" + str(v).replace("'", "''") + "'"
 
 

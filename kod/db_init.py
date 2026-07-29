@@ -30,6 +30,19 @@ def _kreiraj_uz_prompt():
     return kreiraj_bazu_ako_ne_postoji()
 
 
+# Tabele koje mogu da se napune iz dump-a (baza/*_dump.sql) ako su prazne.
+_DUMPOVI = [
+    ("proizvodi_primarna", "primarna_dump.sql"),
+    ("proizvodi_revidirana", "revidirana_dump.sql"),
+]
+
+
+def _tabela_prazna(tabela: str) -> bool:
+    with db.cursor() as cur:
+        cur.execute(f"SELECT NOT EXISTS (SELECT 1 FROM {tabela} LIMIT 1);")
+        return bool(cur.fetchone()[0])
+
+
 try:
     kreirana = _kreiraj_uz_prompt()
     print(f"Baza '{DB_NAME}': {'kreirana' if kreirana else 'već postoji'}")
@@ -41,3 +54,19 @@ except Exception as e:
 run_sql_file(str(_ROOT / "baza" / "01_schema_primarna.sql"))
 run_sql_file(str(_ROOT / "baza" / "02_schema_revidirana.sql"))
 print(f"OK — tabele kreirane u bazi '{DB_NAME}'.")
+
+# Auto-restore: ako je tabela prazna a dump postoji, ucitaj podatke iz dump-a.
+# Tako projekat radi "iz kutije" na tudjem/skolskom racunaru (bez skrejpovanja).
+# Dump je "CREATE TABLE IF NOT EXISTS + INSERT", pa se bezbedno pusta posle seme.
+for _tabela, _dump_fajl in _DUMPOVI:
+    _dump = _ROOT / "baza" / _dump_fajl
+    if not _dump.exists():
+        continue
+    if _tabela_prazna(_tabela):
+        run_sql_file(str(_dump))
+        with db.cursor() as _cur:
+            _cur.execute(f"SELECT COUNT(*) FROM {_tabela};")
+            _n = _cur.fetchone()[0]
+        print(f"Ucitan dump -> {_tabela}: {_n} redova (iz baza/{_dump_fajl}).")
+    else:
+        print(f"{_tabela}: vec ima podatke — preskacem dump.")
