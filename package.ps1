@@ -2,8 +2,10 @@
 # Windows ekvivalent skripte alati\spakuj.sh
 #
 # Pravi ZIP u formatu koji zahteva postavka: Indeks_Ime_Prezime.zip
-# sa folderima \kod \baza \izveštaj. Prvo generise SQL dump-ove baze
-# da \baza sadrzi PODATKE (ne samo seme). Izbacuje .env, __pycache__, *.pyc.
+# sa folderima \kod \baza \izveštaj + root fajlovima za pokretanje
+# (setup.ps1/run.ps1/requirements.txt/README/...), da se raspakovan projekat
+# moze podici. Prvo generise SQL dump-ove baze da \baza sadrzi PODATKE (ne samo
+# seme). Izbacuje .env (tajne), __pycache__, *.pyc.
 #
 # Koristi se:
 #   .\package.ps1 <Indeks> <Ime> <Prezime>
@@ -59,16 +61,46 @@ Get-ChildItem $staging -Recurse -Directory -Filter "__pycache__" | Remove-Item -
 Get-ChildItem $staging -Recurse -File -Include "*.pyc","*.pyo" | Remove-Item -Force -ErrorAction SilentlyContinue
 Get-ChildItem $staging -Recurse -File -Filter ".env" | Remove-Item -Force -ErrorAction SilentlyContinue
 
+# 4b) Kopiraj ROOT fajlove potrebne da se raspakovan projekat SETUP-uje i POKRENE.
+#     Bez ovoga arhiva ima samo kod, ali ne i cime da se podigne. NIKAD .env
+#     (tajne) -- ide samo .env.example kao sablon; setup.ps1 iz njega pravi .env.
+$runFajlovi = @(
+    "requirements.txt", "pyproject.toml", "Makefile", "README.md",
+    "setup.ps1", "run.ps1", "run.bat", ".env.example"
+)
+Write-Host "Kopiram fajlove za pokretanje (setup/run/requirements/README)..." -ForegroundColor Cyan
+foreach ($f in $runFajlovi) {
+    if (Test-Path $f) { Copy-Item $f (Join-Path $staging $f) }
+    else { Write-Host "  (preskacem, nema: $f)" -ForegroundColor DarkGray }
+}
+
 # 5) Provera: da li \baza sadrzi dump-ove?
 $dumpovi = Get-ChildItem (Join-Path $staging "baza") -Filter "*_dump.sql" -ErrorAction SilentlyContinue
 if (-not $dumpovi) {
     Write-Host "UPOZ: \baza nema *_dump.sql (samo seme). Pokreni PostgreSQL pa ponovo spakuj." -ForegroundColor Yellow
 }
 
-# 6) Napravi ZIP
+# 6) Napravi ZIP sa STANDARDNIM "/" separatorom. Pazi: i Compress-Archive i
+#    ZipFile.CreateFromDirectory na .NET Framework-u (Windows PowerShell 5.1)
+#    upisuju "\" u imena ulaza, pa se arhiva pogresno raspakuje na Linux serveru
+#    (dobijes fajlove imena "Ime\kod\..." umesto foldera). Zato rucno dodajemo
+#    ulaze preko ZipArchive i eksplicitno postavljamo ime sa "/".
 Write-Host "Pravim ZIP..." -ForegroundColor Cyan
 if (Test-Path $zipPut) { Remove-Item -Force $zipPut }
-Compress-Archive -Path $staging -DestinationPath $zipPut -CompressionLevel Optimal
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$baseDir = Split-Path $staging -Parent   # tako da ulazi pocinju sa "$naziv/"
+$fs = [System.IO.File]::Open($zipPut, [System.IO.FileMode]::Create)
+try {
+    $arh = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($f in Get-ChildItem $staging -Recurse -File) {
+            $rel = $f.FullName.Substring($baseDir.Length + 1) -replace '\\', '/'
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $arh, $f.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    } finally { $arh.Dispose() }
+} finally { $fs.Dispose() }
 
 Remove-Item -Recurse -Force $staging
 
