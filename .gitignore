@@ -17,3 +17,6 @@ baza/*_dump.sql
 
 # docx build (node_modules)
 .docbuild/
+
+# ZIP arhive za predaju (generisu se: .\package.ps1)
+*.zip

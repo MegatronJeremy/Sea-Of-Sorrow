@@ -64,6 +64,15 @@ korisnika. Setup skripta sama kreira bazu i tabele — nije potreban `createdb`.
 
 Crawl bira izvore: `.\run.ps1 crawl -Izvori gigatron,metalac` (default: sva tri).
 
+**Dupli-klik / `cmd`:** postoje i `.bat` omotači — `run.bat` (isti meni/komande kao
+`run.ps1`) i `package.bat` za pakovanje.
+
+**Pakovanje za predaju:** `.\package.ps1 <Indeks> <Ime> <Prezime>` (ili `package.bat`)
+pravi `Indeks_Ime_Prezime.zip` sa folderima `kod/ baza/ izveštaj/`, kako zahteva
+postavka. Prvo generiše SQL dump-ove baze (`baza/*_dump.sql`) pa `baza/` sadrži
+podatke, a ne samo šeme; izbacuje `.venv`, `__pycache__`, `.git` i `.env` (lozinka).
+Ekvivalent Linux/Mac skripte `alati/spakuj.sh`.
+
 **Prikupljanje (Zadatak 1)** radi preko orchestratora `kod/01_crawler/scrape.py`
 koji svaki izvor pokreće u **zasebnom thread-u (paralelno)** — pošto su to
 različiti serveri, ne povećava opterećenje ni jednom (nema dodatnog rizika od
