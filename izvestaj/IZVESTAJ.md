@@ -137,30 +137,58 @@ klasteru + centroidi).
 ## 6. Preporuke (Zadatak 6)
 
 Content-based sistem, **ručna implementacija** TF-IDF i kosinusne sličnosti.
-Feature vektor: numerički atributi (standardizovani) + brend (one-hot) +
-naziv (ručni TF-IDF). Preporučuje Top 5 iz **iste kategorije**.
+Feature vektor kombinuje četiri tipa odlika: cenu, tehničke specifikacije
+(standardizovane), brend (one-hot) i naziv (ručni TF-IDF). Preporučuje Top 5 iz
+**iste kategorije**.
+
+### Težinsko balansiranje odlika
+
+Postavka traži da se prokomentariše kako su balansirane različite karakteristike
+(npr. da li cena ima veći uticaj od brenda). Različiti tipovi odlika **nemaju
+isti uticaj** na sličnost — svaki blok vektora se množi svojim težinskim
+faktorom pre računanja kosinusne sličnosti:
+
+| Tip odlike | Težina | Obrazloženje |
+|---|:---:|---|
+| Tehničke spec. | **1.0** | Suština sličnosti — proizvodi istih specifikacija (kapacitet, energ. klasa, dijagonala) su funkcionalno zamenljivi |
+| Cena | **0.9** | Drži isti cenovni segment, ali malo ispod tehnike (korelira sa spec., ne sme da je nadjača) |
+| Naziv (TF-IDF) | **0.7** | Hvata istu seriju/model; umeren da ne vraća samo duplikate istog modela |
+| Brend | **0.5** | Najniže namerno — za „slično" želimo i alternative drugih brendova, ne kolaps na jednog proizvođača |
+
+Redosled uticaja: **tehnika ≥ cena > naziv > brend**. Dakle cena ima *veći*
+uticaj od brenda — kupcu je bliži proizvod sličnih performansi i cene nego
+proizvod istog brenda ali sasvim drugih karakteristika.
+
+**Tehnička napomena:** pre množenja težinama, svaki blok se skalira na jedinični
+intenzitet. Bez toga bi *veličina* bloka (tehnika ima 5 kolona, cena 1, brend
+one-hot, TF-IDF sitne vrednosti), a ne težina, određivala stvarni uticaj.
 
 **Primer 1 — Beko kombinovani frižider RDSO206K40WN (26.499 RSD):**
 | Preporuka | Cena | Sličnost |
 |---|---|---|
-| BEKO RDSO206K40WN (gigatron) | 22.499 | 0.999 |
-| Beko RDSO206K40WN (metalac) | 22.002 | 0.993 |
-| Beko RCSA300K40WN | 32.661 | 0.603 |
+| BEKO RDSO206K40WN (gigatron) | 22.499 | 0.992 |
+| Beko RDSO206K40WN (metalac) | 22.002 | 0.988 |
+| Beko RDSO206K40SN | 24.741 | 0.815 |
+| Beko RSSE265K40 (jedna vrata) | 28.844 | 0.810 |
+| Beko RCSA300K40WN | 32.661 | 0.799 |
 
 > Top dve preporuke su **isti model sa druga dva sajta** (cena 22.002–26.499) —
 > sistem tačno prepoznaje identičan proizvod, a različita cena pokazuje vrednost
-> multi-source pristupa (poređenje cena po prodavnici).
+> multi-source pristupa (poređenje cena po prodavnici). Ostale su tehnički bliske
+> Beko varijante u istom cenovnom rangu.
 
 **Primer 2 — Candy mašina za pranje veša CO4 1262D3/2-S (24.999 RSD):**
 | Preporuka | Cena | Sličnost |
 |---|---|---|
-| Candy CSO286TWM6/1-S | 32.391 | 0.738 |
-| Candy CSO4474TWMB6/1-S | 31.844 | 0.730 |
-| Candy GD 27SB7-S | 27.711 | 0.728 |
+| Candy GD 27SB7-S | 27.711 | 0.907 |
+| Candy GD 27SB7-S (drugi izvor) | 29.999 | 0.903 |
+| Candy CSO4474TWMB6/1-S | 34.191 | 0.892 |
+| Candy EY 27S7-S | 26.991 | 0.888 |
+| Candy CSO286TWM6/1-S | 32.391 | 0.883 |
 
-**Težinsko balansiranje:** isti brend i sličan naziv (TF-IDF) najviše utiču na
-sličnost (zato Beko/Candy modeli dominiraju), dok numerička bliskost cene fino
-rangira unutar brenda.
+> Preporuke su mašine sličnog kapaciteta i cenovnog ranga; visoke sličnosti
+> (0.88–0.91) potvrđuju da tehničke odlike + cena dominiraju nad pukim
+> poklapanjem naziva.
 
 ---
 

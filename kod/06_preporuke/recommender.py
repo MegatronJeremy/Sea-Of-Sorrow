@@ -75,25 +75,66 @@ def kosinusna_slicnost(v1: np.ndarray, v2: np.ndarray) -> float:
 
 
 class ContentBasedRecommender:
-    """Preporuke na osnovu sličnosti feature vektora, unutar iste kategorije."""
+    """Preporuke na osnovu sličnosti feature vektora, unutar iste kategorije.
 
-    def __init__(self, df: pd.DataFrame):
+    Različiti tipovi odlika NEMAJU isti uticaj na sličnost — svaki blok vektora
+    (cena, tehničke spec., brend, naziv) množi se svojim težinskim faktorom pre
+    računanja kosinusne sličnosti. Pošto cos zavisi od skalarnog proizvoda,
+    množenje bloka skalarom w pojačava (veće w) ili slabi (manje w) doprinos tog
+    tipa odlike ukupnoj sličnosti.
+
+    Odabir težina (rezonovanje za belu tehniku — preporuke su već unutar iste
+    kategorije, pa pitanje je šta čini dva npr. frižidera sličnim):
+      - tehničke spec. 1.0 — SUŠTINA sličnosti: proizvodi istih specifikacija su
+                             funkcionalno zamenljivi (kapacitet, energ. klasa, ...)
+      - cena           0.9 — drži isti cenovni segment, ali ne sme da nadjača
+                             funkciju (korelira sa spec., pa malo ispod)
+      - naziv (TF-IDF) 0.7 — hvata istu seriju/model; umeren da ne vraća samo
+                             duplikate istog modela
+      - brend          0.5 — NAJNIŽE namerno: za "slično" želimo i alternative
+                             drugih brendova, ne kolaps na jednog proizvođača
+
+    Zaključak: tehnika ≥ cena > naziv > brend.
+    """
+
+    PODRAZUMEVANE_TEZINE = {"tehnicke": 1.0, "cena": 0.9, "naziv": 0.7, "brend": 0.5}
+
+    def __init__(self, df: pd.DataFrame, tezine: dict[str, float] | None = None):
         self.df = df.reset_index(drop=True)
+        self.tezine = {**self.PODRAZUMEVANE_TEZINE, **(tezine or {})}
         self.feature_matrica = self._izgradi_feature_matricu(self.df)
 
-    def _izgradi_feature_matricu(self, df: pd.DataFrame) -> np.ndarray:
-        numericke_kolone = ["cena", "energetska_klasa_num", "dijagonala_inch",
-                             "kapacitet_kg", "zapremina_l", "snaga_w"]
-        numericke = df[numericke_kolone].fillna(0)
-        numericke = (numericke - numericke.mean()) / numericke.std().replace(0, 1)
+    @staticmethod
+    def _skaliraj_blok(blok: np.ndarray) -> np.ndarray:
+        """Deli blok srednjim intenzitetom reda tako da tipičan doprinos bloka
+        bude ~1. Bez ovoga bi veličina bloka (broj kolona / skala vrednosti), a
+        ne težina, određivala uticaj: tech ima 5 kolona, cena 1, brend tačno
+        jednu jedinicu, a TF-IDF sitne vrednosti — pa ih poravnavamo pre težina."""
+        blok = np.asarray(blok, dtype=float)
+        norme = np.sqrt((blok ** 2).sum(axis=1))
+        prosek = float(norme[norme > 0].mean()) if np.any(norme > 0) else 1.0
+        return blok / prosek
 
-        brend_one_hot = pd.get_dummies(df["brend"])
-        tfidf_naziv = izgradi_tfidf_matricu(df["naziv"])
+    def _izgradi_feature_matricu(self, df: pd.DataFrame) -> np.ndarray:
+        # cena se izdvaja u zaseban blok da bi nosila težinu nezavisnu od
+        # ostalih (tehničkih) numeričkih odlika.
+        tehnicke_kolone = ["energetska_klasa_num", "dijagonala_inch",
+                           "kapacitet_kg", "zapremina_l", "snaga_w"]
+
+        def _standardizuj(okvir: pd.DataFrame) -> np.ndarray:
+            okvir = okvir.apply(pd.to_numeric, errors="coerce").fillna(0)
+            return ((okvir - okvir.mean()) / okvir.std().replace(0, 1)).values
+
+        cena = self._skaliraj_blok(_standardizuj(df[["cena"]]))
+        tehnicke = self._skaliraj_blok(_standardizuj(df[tehnicke_kolone]))
+        brend = self._skaliraj_blok(pd.get_dummies(df["brend"]).values.astype(float))
+        naziv = self._skaliraj_blok(izgradi_tfidf_matricu(df["naziv"]))
 
         return np.hstack([
-            numericke.values,
-            brend_one_hot.values,
-            tfidf_naziv,
+            cena * self.tezine["cena"],
+            tehnicke * self.tezine["tehnicke"],
+            brend * self.tezine["brend"],
+            naziv * self.tezine["naziv"],
         ])
 
     def preporuci(self, proizvod_id: int, top_n: int = 5) -> pd.DataFrame:
